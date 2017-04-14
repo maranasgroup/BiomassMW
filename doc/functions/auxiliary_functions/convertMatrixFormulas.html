@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of convertMatrixFormulas</title>
+  <meta name="keywords" content="convertMatrixFormulas">
+  <meta name="description" content="Convert the matrix form of the chemical formulae into string form">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html &copy; 2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../../m2html.css">
+  <script type="text/javascript">
+    if (top.frames.length == 0) { top.location = "../../index.html"; };
+  </script>
+</head>
+<body>
+<a name="_top"></a>
+<!-- ../menu.html functions --><!-- menu.html auxiliary_functions -->
+<h1>convertMatrixFormulas
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="box"><strong>Convert the matrix form of the chemical formulae into string form</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="box"><strong>function metForm = convertMatrixFormulas(element, metEle, dMax) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="fragment"><pre class="comment">Convert the matrix form of the chemical formulae into string form
+metForm = convertMatrixFormulas(element, metEle, dMax)
+Input:
+  element:     cell array of element corresponding to the columns of metEle
+  metEle:      chemical formulas in a M by E matrix for M metabolites and 'E elements in 'element'
+  dMax:        the maximum number of digits taken for the stoichiometry
+
+Siu Hung Joshua Chan Nov 2016</pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../../matlabicon.gif)">
+</ul>
+This function is called by:
+<ul style="list-style-image:url(../../matlabicon.gif)">
+<li><a href="../../functions/computeFormulasFillMets.html" class="code" title="function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM,nameCM,param)">computeFormulasFillMets</a>	Compute the chemical formulas of the unknown metabolites</li><li><a href="../../functions/computeMetMWrange.html" class="code" title="function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,param)">computeMetMWrange</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li></ul>
+<!-- crossreference -->
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function metForm = convertMatrixFormulas(element, metEle, dMax)</a>
+0002 <span class="comment">%Convert the matrix form of the chemical formulae into string form</span>
+0003 <span class="comment">%metForm = convertMatrixFormulas(element, metEle, dMax)</span>
+0004 <span class="comment">%Input:</span>
+0005 <span class="comment">%  element:     cell array of element corresponding to the columns of metEle</span>
+0006 <span class="comment">%  metEle:      chemical formulas in a M by E matrix for M metabolites and 'E elements in 'element'</span>
+0007 <span class="comment">%  dMax:        the maximum number of digits taken for the stoichiometry</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">%Siu Hung Joshua Chan Nov 2016</span>
+0010 <span class="keyword">if</span> nargin &lt; 3 
+0011     dMax = 12;
+0012 <span class="keyword">end</span>
+0013 <span class="comment">%combine duplicate elements</span>
+0014 [eleUni,ia,ib] = unique(element);
+0015 <span class="keyword">if</span> numel(eleUni) &lt; numel(element);
+0016     <span class="keyword">for</span> j = 1:numel(eleUni)
+0017         metEle(:,ia(j)) = sum(metEle(:,ib == j),2);
+0018     <span class="keyword">end</span>
+0019     element = eleUni;
+0020     metEle = metEle(:,ia);
+0021 <span class="keyword">end</span>
+0022 <span class="comment">%prioritize elements</span>
+0023 [~,id] = ismember({<span class="string">'C'</span>;<span class="string">'H'</span>;<span class="string">'N'</span>;<span class="string">'O'</span>;<span class="string">'P'</span>;<span class="string">'S'</span>}, element);
+0024 id2 = setdiff(1:numel(element), id);
+0025 element = element([id(id~=0); id2(:)]);
+0026 metEle = metEle(:, [id(id~=0); id2(:)]);
+0027 element = element(:);
+0028 <span class="comment">%charge put at the end if exist</span>
+0029 id = strcmp(element,<span class="string">'Charge'</span>);
+0030 <span class="keyword">if</span> any(id)
+0031     element = [element(~id); element(id)];
+0032     metEle = metEle(:,[find(~id); find(id)]);
+0033 <span class="keyword">end</span>
+0034 metForm = repmat({<span class="string">''</span>}, size(metEle,1),1);
+0035 <span class="keyword">for</span> j = 1:size(metEle,1)
+0036     <span class="keyword">if</span> ~any(isnan(metEle(j,:)))
+0037         <span class="keyword">if</span> ~any(metEle(j,:))
+0038             metJ = <span class="string">'Mass0'</span>; <span class="comment">%allow mets with no mass (e.g. photon)</span>
+0039         <span class="keyword">else</span>
+0040             metJ = <span class="string">''</span>;
+0041             <span class="keyword">for</span> k = 1:numel(element)
+0042                 <span class="keyword">if</span> metEle(j,k) == 1 &amp;&amp; ~strcmp(element{k},<span class="string">'Charge'</span>)
+0043                     metJ = [metJ element{k}];
+0044                 <span class="keyword">elseif</span> abs(metEle(j,k)) &gt; 10^(-dMax)
+0045                     n = full(metEle(j,k));
+0046                     d = 0;
+0047                     <span class="keyword">while</span> abs(round(n,d) - n) &gt; 1e-10 &amp;&amp; d &lt; dMax
+0048                         d = d + 1;
+0049                     <span class="keyword">end</span>
+0050                     n = round(n,d);
+0051                     str = sprintf([<span class="string">'%.'</span> num2str(dMax) <span class="string">'f'</span>],n);
+0052                     str = regexp(fliplr(str),<span class="string">'0*+(\d*\.\d*\-?)|(.*)'</span>,<span class="string">'tokens'</span>);
+0053                     str = fliplr(str{1}{1});
+0054                     <span class="keyword">if</span> str(end) == <span class="string">'.'</span>
+0055                         str(end) = <span class="string">''</span>; 
+0056                     <span class="keyword">end</span>
+0057                     metJ = [metJ element{k} str];
+0058                     
+0059                 <span class="keyword">end</span>
+0060             <span class="keyword">end</span>
+0061         <span class="keyword">end</span>
+0062         metForm{j} = metJ;
+0063     <span class="keyword">end</span>
+0064 <span class="keyword">end</span>
+0065 <span class="keyword">end</span></pre></div>
+<hr><address>Generated on Fri 14-Apr-2017 17:13:46 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2005</address>
+</body>
+</html>

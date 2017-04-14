@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of MW</title>
+  <meta name="keywords" content="MW">
+  <meta name="description" content="Return the molecular weight for the cell array or string of formula 'form'">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html &copy; 2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../../m2html.css">
+  <script type="text/javascript">
+    if (top.frames.length == 0) { top.location = "../../index.html"; };
+  </script>
+</head>
+<body>
+<a name="_top"></a>
+<!-- ../menu.html functions --><!-- menu.html auxiliary_functions -->
+<h1>MW
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="box"><strong>Return the molecular weight for the cell array or string of formula 'form'</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="box"><strong>function [mw, elRes, stRes] = MW(form) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="fragment"><pre class="comment">Return the molecular weight for the cell array or string of formula 'form'
+The formulas must not have '(' and ')'.
+Must be an elemental symbol followed by a number.
+
+Output:
+  mw:      molecular weight, in g/mol
+  elRes:   Unrecognized elements in form. MW assumes zero weight for them.
+  stRes:   the elemental matrix for the columns corresponding to elRes
+
+Siu Hung Joshua Chan Nov 2016</pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../../matlabicon.gif)">
+<li><a href="../../functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>	Check the elemental balance of the reactions in the COBRA mode 'model'.</li></ul>
+This function is called by:
+<ul style="list-style-image:url(../../matlabicon.gif)">
+<li><a href="../../functions/computeMetMWrange.html" class="code" title="function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,param)">computeMetMWrange</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li></ul>
+<!-- crossreference -->
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [mw, elRes, stRes] = MW(form)</a>
+0002 <span class="comment">%Return the molecular weight for the cell array or string of formula 'form'</span>
+0003 <span class="comment">%The formulas must not have '(' and ')'.</span>
+0004 <span class="comment">%Must be an elemental symbol followed by a number.</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">%Output:</span>
+0007 <span class="comment">%  mw:      molecular weight, in g/mol</span>
+0008 <span class="comment">%  elRes:   Unrecognized elements in form. MW assumes zero weight for them.</span>
+0009 <span class="comment">%  stRes:   the elemental matrix for the columns corresponding to elRes</span>
+0010 <span class="comment">%</span>
+0011 <span class="comment">%Siu Hung Joshua Chan Nov 2016</span>
+0012 
+0013 [~,element, metEle] = <a href="../../functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(form);
+0014 H = 1.00794; He = 4.002602; Li = 6.941; Be = 9.012182; B = 10.811; C = 12.011; N = 14.00674;
+0015 O = 15.9994; F = 18.9984032; Ne = 20.1797; Na = 22.989768; Mg = 24.305; Al = 26.981539; Si = 28.0855;
+0016 P = 30.973762; S = 32.066; Cl = 35.4527; Ar = 39.948; K = 39.0983; Ca = 40.078; Sc = 44.95591;
+0017 Ti = 47.88; V = 50.9415; Cr = 51.9961; Mn = 54.93805; Fe = 55.847; Co = 58.9332; Ni = 58.69;
+0018 Cu = 63.546; Zn = 65.39; Ga = 69.723; Ge = 72.61; As = 74.92159; Se = 78.96; Br = 79.904; Kr = 83.8;
+0019 Rb = 85.4678; Sr = 87.62; Y = 88.90585; Zr = 91.224; Nb = 92.90638; Mo = 95.94; Tc = 98.9063;
+0020 Ru = 101.07; Rh = 102.9055; Pd = 106.42; Ag = 107.8682; Cd = 112.411; In = 114.82; Sn = 118.71;
+0021 Sb = 121.75; Te = 127.6; I = 126.90447; Xe = 131.29; Cs = 132.90543; Ba = 137.327; La = 138.9055;
+0022 Ce = 140.115; Pr = 140.90765; Nd = 144.24; Pm = 146.9151; Sm = 150.36; Eu = 151.965; Gd = 157.25;
+0023 Tb = 158.92534; Dy = 162.5; Ho = 164.93032; Er = 167.26; Tm = 168.93421; Yb = 173.04; Lu = 174.967;
+0024 Hf = 178.49; Ta = 180.9479; W = 183.85; Re = 186.207; Os = 190.2; Ir = 192.22; Pt = 195.08;
+0025 Au = 196.96654; Hg = 200.59; Tl = 204.3833; Pb = 207.2; Bi = 208.98037; Po = 208.9824; At = 209.9871;
+0026 Rn = 222.0176; Ac = 223.0197; Th = 226.0254; Pa = 227.0278; U = 232.0381; Np = 231.0359; Pu = 238.0289;
+0027 Am = 237.0482; Cm = 244.0642; Bk = 243.0614; Cf = 247.0703; Es = 247.0703; Fm = 251.0796; Md = 252.0829;
+0028 No = 257.0951; Lr = 258.0986; Rf = 259.1009; Db = 260.1053; Sg = 261.1087; Bh = 262.1138; Hs = 263.1182;
+0029 Mt = 262.1229;
+0030 <span class="comment">% Unamed = NaN;</span>
+0031 residue = false(numel(element),1);
+0032 <span class="keyword">for</span> j = 1:numel(element)
+0033     <span class="keyword">if</span> ~exist(element{j}, <span class="string">'var'</span>)
+0034         residue(j) = true;
+0035     <span class="keyword">end</span>
+0036 <span class="keyword">end</span>
+0037 <span class="keyword">if</span> all(residue)
+0038     mw = NaN(size(metEle,1),1);
+0039 <span class="keyword">else</span>
+0040     v = [<span class="string">'[ '</span> strjoin(element(~residue), <span class="string">' '</span>) <span class="string">' ]'</span>];
+0041     eval([<span class="string">'mw = metEle(:,~residue) * '</span> v <span class="string">''';'</span>]);
+0042     mw(mw == 0) = NaN;
+0043 <span class="keyword">end</span>
+0044     elRes = element(residue);
+0045     stRes = metEle(:, residue);
+0046 <span class="keyword">end</span></pre></div>
+<hr><address>Generated on Fri 14-Apr-2017 17:13:46 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2005</address>
+</body>
+</html>
