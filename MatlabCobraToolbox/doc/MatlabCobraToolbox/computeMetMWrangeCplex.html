@@ -1,0 +1,343 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of computeMetMWrangeCplex</title>
+  <meta name="keywords" content="computeMetMWrangeCplex">
+  <meta name="description" content="Compute the minimum and maximum molecular weight (MW) of a metabolie">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html &copy; 2003 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<!-- menu.html MatlabCobraToolbox -->
+<h1>computeMetMWrangeCplex
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>Compute the minimum and maximum molecular weight (MW) of a metabolie</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrangeCplex(model,metKnown,metInterest,rxns,percent,param) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre class="comment"> Compute the minimum and maximum molecular weight (MW) of a metabolie
+ given a set of formulas for the known metabolites using a set of reactions. 
+ Done by first minimizing the mass-and-charge imbalance. Then fixing the 
+ imbalance at the minimum or higher level, minimize and maximize the molecular
+ weight of the met of interest.
+
+[metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,param)
+ Input: 
+    model         COBRA model
+    metKnown      A known set of metabolites with formulas (character array or IDs)
+    metInterest   The metabolite of interest (character or ID)
+    rxns          The set of reactions used to compute the formula of metInterest 
+                  (character array or IDs)
+    (optional)
+    percent       The percent of inconsistency allowed when calculating the range
+                  for the molecular weight. The constraints added are
+                  sum(inconsistency_e) &lt;= min(sum(inconsistency_e)) * (1 + percent)
+                  for each element e. Default percent = 0
+    param         parameter structure for Cplex
+
+ Output:
+    metMWrange    [min MW, max MW] (1 x 2 vector)
+    metForm       The corresponding empirical formulas (1 x 2 cell array)
+    metFeas       Infeasibility from the corresponding optimization (1 x 2 vector)
+    rxnBal        imbalance of each reaction (#element x #rxns matrix)
+    ele           elements corresponding to the row of rxnBal, as well as
+                  to the coloumn of metEle
+    metEle        chemical formulas in a M by E matrix
+    LP            Cplex LP structure</pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="../MatlabCobraToolbox/auxiliary_functions/MW.html" class="code" title="function [mw, elRes, stRes] = MW(form)">MW</a>	Return the molecular weight for the cell array or string of formula 'form'</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>	Check the elemental balance of the reactions in the COBRA mode 'model'.</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>	Check the feasibility of a solution given a COBRA model structure or a CPLEX dynamic object and a solution</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>	Convert the matrix form of the chemical formulae into string form</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/setCplexParam.html" class="code" title="function LP = setCplexParam(LP, solverParam,verbFlag)">setCplexParam</a>	Set the parameters of the CPLEX object according to the structure solverParam</li></ul>
+This function is called by:
+<ul style="list-style-image:url(../matlabicon.gif)">
+</ul>
+<!-- crossreference -->
+
+<h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="#_sub1" class="code">function [mw, elRes, stRes] = MW(form)</a></li></ul>
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrangeCplex(model,metKnown,metInterest,rxns,percent,param)</a>
+0002 <span class="comment">% Compute the minimum and maximum molecular weight (MW) of a metabolie</span>
+0003 <span class="comment">% given a set of formulas for the known metabolites using a set of reactions.</span>
+0004 <span class="comment">% Done by first minimizing the mass-and-charge imbalance. Then fixing the</span>
+0005 <span class="comment">% imbalance at the minimum or higher level, minimize and maximize the molecular</span>
+0006 <span class="comment">% weight of the met of interest.</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">%[metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,param)</span>
+0009 <span class="comment">% Input:</span>
+0010 <span class="comment">%    model         COBRA model</span>
+0011 <span class="comment">%    metKnown      A known set of metabolites with formulas (character array or IDs)</span>
+0012 <span class="comment">%    metInterest   The metabolite of interest (character or ID)</span>
+0013 <span class="comment">%    rxns          The set of reactions used to compute the formula of metInterest</span>
+0014 <span class="comment">%                  (character array or IDs)</span>
+0015 <span class="comment">%    (optional)</span>
+0016 <span class="comment">%    percent       The percent of inconsistency allowed when calculating the range</span>
+0017 <span class="comment">%                  for the molecular weight. The constraints added are</span>
+0018 <span class="comment">%                  sum(inconsistency_e) &lt;= min(sum(inconsistency_e)) * (1 + percent)</span>
+0019 <span class="comment">%                  for each element e. Default percent = 0</span>
+0020 <span class="comment">%    param         parameter structure for Cplex</span>
+0021 <span class="comment">%</span>
+0022 <span class="comment">% Output:</span>
+0023 <span class="comment">%    metMWrange    [min MW, max MW] (1 x 2 vector)</span>
+0024 <span class="comment">%    metForm       The corresponding empirical formulas (1 x 2 cell array)</span>
+0025 <span class="comment">%    metFeas       Infeasibility from the corresponding optimization (1 x 2 vector)</span>
+0026 <span class="comment">%    rxnBal        imbalance of each reaction (#element x #rxns matrix)</span>
+0027 <span class="comment">%    ele           elements corresponding to the row of rxnBal, as well as</span>
+0028 <span class="comment">%                  to the coloumn of metEle</span>
+0029 <span class="comment">%    metEle        chemical formulas in a M by E matrix</span>
+0030 <span class="comment">%    LP            Cplex LP structure</span>
+0031 
+0032 <span class="comment">%check mets with formulas that need to be transformed</span>
+0033 <span class="comment">%form0 = model.metFormulas;</span>
+0034 <span class="keyword">if</span> nargin &lt; 6
+0035     param = struct();
+0036 <span class="keyword">end</span>
+0037 <span class="keyword">if</span> nargin &lt; 5 || isempty(percent)
+0038     percent = 0;
+0039 <span class="keyword">end</span>
+0040 <span class="keyword">if</span> nargin &lt; 4 || isempty(rxns)
+0041     rxnC = find(sum(model.S~=0,1)&gt;1 &amp; (model.lb ~=0 | model.ub ~= 0)')';
+0042 <span class="keyword">elseif</span> iscell(rxns) || ischar(rxns)
+0043     rxnC = findRxnIDs(model,rxns);
+0044 <span class="keyword">else</span>
+0045     rxnC = rxns;
+0046 <span class="keyword">end</span>
+0047 <span class="keyword">if</span> any(rxnC == 0)
+0048     error(<span class="string">'%s in rxns is not in the model.'</span>, rxns{find(rxnC==0,1)});
+0049 <span class="keyword">end</span>
+0050 <span class="keyword">if</span> nargin &lt; 2 || isempty(metKnown)
+0051     metKnown = model.mets(~cellfun(@isempty,model.metFormulas));
+0052 <span class="keyword">end</span>
+0053 <span class="keyword">if</span> iscell(metKnown) || ischar(metKnown)
+0054     metK = findMetIDs(model,metKnown);
+0055 <span class="keyword">else</span>
+0056     metK = metKnown;
+0057 <span class="keyword">end</span>
+0058 <span class="keyword">if</span> any(metK == 0)
+0059     error(<span class="string">'%s in metKnown is not in the model.'</span>, metKnown{find(metK==0,1)});
+0060 <span class="keyword">end</span>
+0061 <span class="keyword">if</span> iscell(metInterest) || ischar(metInterest)
+0062     metInterest = findMetIDs(model,metInterest);
+0063 <span class="keyword">end</span>
+0064 metInterest0 = metInterest;
+0065 <span class="keyword">if</span> metInterest == 0
+0066     error(<span class="string">'The biomass met ID is incorrect.'</span>);
+0067 <span class="keyword">elseif</span> ismember(metInterest,metK)
+0068     metK(metK == metInterest) = [];
+0069 <span class="keyword">end</span>
+0070 metKform = cellfun(@isempty,model.metFormulas(metK));
+0071 <span class="keyword">if</span> any(metKform)
+0072     warning(<span class="string">'Some mets in metKnown do not have formulas in the model. Ignore them.'</span>);
+0073 <span class="keyword">end</span>
+0074 <span class="comment">%All formulas must be in the form of e.g. Abc2Bcd1. Elements are</span>
+0075 <span class="comment">%represented by one capital letter followed by lower case letter or</span>
+0076 <span class="comment">%underscore, followed by a number for the stoichiometry.</span>
+0077 <span class="comment">%Brackets/parentheses are also supported.</span>
+0078 [metK,metKform] = deal(metK(~metKform), model.metFormulas(metK(~metKform)));
+0079 <span class="comment">%Now handled by checkEleBalance</span>
+0080 <span class="comment">% re = regexp(metKform,'[A-Z][a-z_]*(\-?\d+\.?\d*)?','match');</span>
+0081 <span class="comment">% re = cellfun(@(x) strjoin(x,''),re,'UniformOutput',false);</span>
+0082 <span class="comment">% goodForm = strcmp(re, strtrim(metKform));</span>
+0083 <span class="comment">% if ~all(goodForm)</span>
+0084 <span class="comment">%     goodForm = find(~goodForm,1);</span>
+0085 <span class="comment">%     error('%s has an invalid formula %s\n',metKnown{goodForm},metKform{goodForm});</span>
+0086 <span class="comment">% end</span>
+0087 
+0088 <span class="comment">%% minimum inconsistency</span>
+0089 [~,ele,metEleK] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metKform);
+0090 eleCh = strcmp(ele,<span class="string">'Charge'</span>);
+0091 m = size(model.S,1);
+0092 nE = numel(ele);
+0093 mK = numel(metK);
+0094 mU = m - mK;
+0095 metU = setdiff((1:m)',metK);
+0096 metInterest = find(metU == metInterest);
+0097 nR = numel(rxnC);
+0098 nameM = strcat(repmat(model.mets(metU), nE,1),<span class="string">'_'</span>, reshape(repmat(ele(:)',mU,1),nE*mU,1));
+0099 nameR = strcat(repmat(model.rxns(rxnC), nE,1),<span class="string">'_'</span>, reshape(repmat(ele(:)',nR,1),nE*nR,1));
+0100 LP = Cplex();
+0101 <span class="comment">%n_ik, stoichoimetry for element k in met i</span>
+0102 LP.addCols(zeros(mU*nE,1),[],zeros(mU*nE,1),inf(mU*nE,1),[],char(nameM));
+0103 <span class="keyword">if</span> any(eleCh)
+0104     <span class="comment">%if charge is in the formula, allow negative charges</span>
+0105     eleChK = find(eleCh);
+0106     LP.Model.lb((mU*(eleChK-1) + 1):(mU*eleChK)) = -inf;
+0107 <span class="keyword">end</span>
+0108 <span class="comment">%x^+_jk, positive inconsistency of element k in reaction j</span>
+0109 LP.addCols(ones(nR*nE,1),[],zeros(nR*nE,1),inf(nR*nE,1),[],char(strcat(nameR,<span class="string">'_pos'</span>)));
+0110 <span class="comment">%x^-_jk, negative inconsistency of element k in reaction j</span>
+0111 LP.addCols(ones(nR*nE,1),[],zeros(nR*nE,1),inf(nR*nE,1),[],char(strcat(nameR,<span class="string">'_neg'</span>)));
+0112 <span class="comment">%RHS</span>
+0113 b = -model.S(metK,rxnC)' * metEleK;
+0114 b = b(:);
+0115 <span class="comment">%constraint matrix</span>
+0116 [row,col,entry] = find(model.S(metU,rxnC)');
+0117 row = repmat(row(:),nE,1)+reshape(repmat(0:nR:nR*(nE-1),numel(row),1),numel(row)*nE,1);
+0118 col = repmat(col(:),nE,1)+reshape(repmat(0:mU:mU*(nE-1),numel(col),1),numel(col)*nE,1);
+0119 entry = repmat(entry,nE,1);
+0120 A = [sparse(row,col,entry,nR*nE,mU*nE), sparse(1:nR*nE,1:nR*nE,ones(nR*nE,1),nR*nE,nR*nE), <span class="keyword">...</span>
+0121     sparse(1:nR*nE,1:nR*nE,-ones(nR*nE,1),nR*nE,nR*nE)];
+0122 <span class="comment">% S_unknown' n_unknown = - S_known' * n_known</span>
+0123 LP.addRows(b, A, b, char(strcat(nameR,<span class="string">'_bal'</span>)));
+0124 <span class="comment">%Handle parameters</span>
+0125 cobraParam = struct();
+0126 cobraParamList = {<span class="string">'feasTol'</span>,<span class="string">'optTol'</span>};
+0127 CplexParamList = {<span class="string">'feasibility'</span>,<span class="string">'optimality'</span>};
+0128 [cobraParam.feasTol, cobraParam.optTol] = getCobraSolverParams(<span class="string">'LP'</span>,cobraParamList, param);
+0129 <span class="keyword">for</span> j = 1:numel(CplexParamList)
+0130     <span class="keyword">if</span> isfield(param,CplexParamList{j})
+0131         cobraParam.(cobraParamList{j}) = param.(CplexParamList{j});
+0132     <span class="keyword">elseif</span> isfield(param,<span class="string">'simplex'</span>) &amp;&amp; isfield(param.simplex,CplexParamList{j})
+0133         cobraParam.(cobraParamList{j}) = param.simplex.(CplexParamList{j});
+0134     <span class="keyword">elseif</span> isfield(param,<span class="string">'simplex'</span>) &amp;&amp; isfield(param.simplex,<span class="string">'tolerances'</span>) &amp;&amp; isfield(param.simplex.tolerances,CplexParamList{j})
+0135         cobraParam.(cobraParamList{j}) = param.simplex.tolerances.(CplexParamList{j});
+0136     <span class="keyword">else</span>
+0137         param.simplex.tolerances.(CplexParamList{j}) = cobraParam.(cobraParamList{j});
+0138     <span class="keyword">end</span>
+0139 <span class="keyword">end</span>
+0140 LP = <a href="../MatlabCobraToolbox/auxiliary_functions/setCplexParam.html" class="code" title="function LP = setCplexParam(LP, solverParam,verbFlag)">setCplexParam</a>(LP,param);
+0141 feasTol = LP.Param.simplex.tolerances.feasibility.Cur;
+0142 <span class="comment">%Solve</span>
+0143 LP.solve;
+0144 <span class="comment">%manually check feasibility</span>
+0145 feas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP);
+0146 <span class="keyword">if</span> ~(feas &lt;= feasTol)
+0147     <span class="comment">%terminate if infeasible (should not happen)</span>
+0148     <span class="keyword">if</span> isfield(LP.Solution,<span class="string">'x'</span>)
+0149         metEle = zeros(numel(model.mets),numel(ele));
+0150         metEle(metK,:) = metEleK;
+0151         metEle(metU,:) = reshape(LP.Solution.x(1:mU*nE),mU,nE);
+0152         rxnBal = metEle' * model.S;
+0153     <span class="keyword">else</span>
+0154         metEle = [];
+0155         rxnBal = [];
+0156     <span class="keyword">end</span>
+0157     fprint(<span class="string">'Infeasible during optimization for minimal inconsistency.'</span>);
+0158     <span class="keyword">return</span>
+0159 <span class="keyword">end</span>
+0160 x = LP.Solution.x;
+0161 
+0162 <span class="comment">%% metabolite MW range under minimum inconsistency</span>
+0163 <span class="comment">%give bounds for the met of interest</span>
+0164 LP.Model.ub(metInterest:mU:(metInterest+mU*(nE-1))) = 1e7;
+0165 <span class="keyword">if</span> any(eleCh)
+0166     LP.Model.lb(metInterest+mU*(find(eleCh)-1)) = -1e7;
+0167 <span class="keyword">end</span>
+0168 <span class="comment">% Constraint element-wise, sum(inconsist_e) &lt;= min_inconsist_e * (1+percent)</span>
+0169 <span class="keyword">for</span> k = 1:nE
+0170     ind = (mU*nE+nR*(k-1)+1):(mU*nE+nR*k);
+0171     LP.addRows(0,<span class="keyword">...</span>
+0172         sparse(ones(nR*2,1),[ind, (ind + nR*nE)], ones(nR*2,1),1,size(LP.Model.A,2)),<span class="keyword">...</span>
+0173         sum(x([ind, (ind + nR*nE)]))*(1+1e-7+abs(percent))+1e-5, strcat(<span class="string">'min_incon_'</span>,ele{k}));
+0174 <span class="keyword">end</span>
+0175 <span class="comment">%molecular weight of each element</span>
+0176 c = <a href="../MatlabCobraToolbox/auxiliary_functions/MW.html" class="code" title="function [mw, elRes, stRes] = MW(form)">MW</a>(ele);
+0177 c2 = c;
+0178 c2(isnan(c)) = 0;
+0179 <span class="comment">%change objective to the molecular weight of the met of interest</span>
+0180 LP.Model.obj(:) = 0;
+0181 LP.Model.obj(metInterest:mU:(metInterest+mU*(nE-1))) = c2;
+0182 LP.Model.sense = <span class="string">'minimize'</span>;
+0183 LP.solve;
+0184 feas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP);
+0185 <span class="comment">%declare output variables</span>
+0186 metFeas(1) = feas;
+0187 metMWrange = zeros(1,2);
+0188 metEle = NaN(numel(model.mets),numel(ele),2);
+0189 
+0190 [metEle(metK,:,1),metEle(metK,:,2)] = deal(metEleK);
+0191 <span class="keyword">if</span> isfield(LP.Solution,<span class="string">'x'</span>)
+0192     metEle(metU,:,1) = reshape(LP.Solution.x(1:mU*nE),mU,nE);
+0193     metMWrange(1) = LP.Model.obj(:)' * LP.Solution.x;
+0194 <span class="keyword">end</span>
+0195 <span class="keyword">if</span> ~(feas &lt;= feasTol)
+0196     <span class="comment">%may happen if scaling is allowed and meanwhile the met of interest can</span>
+0197     <span class="comment">%have unbounded molecular weight</span>
+0198     fprintf(<span class="string">'Infeasible during minimization for biomass weight.\n'</span>);
+0199 <span class="keyword">end</span>
+0200 LP.Model.sense = <span class="string">'maximize'</span>;
+0201 LP.solve;
+0202 feas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP);
+0203 metFeas(2) = feas;
+0204 <span class="keyword">if</span> isfield(LP.Solution,<span class="string">'x'</span>)
+0205     metEle(metU,:,2) = reshape(LP.Solution.x(1:mU*nE),mU,nE);
+0206     metMWrange(2) = LP.Model.obj(:)' * LP.Solution.x;
+0207 <span class="keyword">end</span>
+0208 rxnBal(:,:,1) = metEle(:,:,1)' * model.S;
+0209 rxnBal(:,:,2) = metEle(:,:,2)' * model.S;
+0210 <span class="keyword">if</span> ~(feas &lt;= feasTol)
+0211     <span class="comment">%may happen if scaling is allowed and meanwhile the met of interest can</span>
+0212     <span class="comment">%have unbounded molecular weight</span>
+0213     fprintf(<span class="string">'Infeasible during maximization for biomass weight.\n'</span>);
+0214 <span class="keyword">end</span>
+0215 formBM0 = [metEle(metInterest0,:,1);metEle(metInterest0,:,2)];
+0216 metForm = <a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,formBM0);
+0217 metForm = metForm(:)';
+0218 
+0219 eleG = isnan(c) &amp; ~eleCh(:);
+0220 <span class="keyword">if</span> any(abs(formBM0(:,eleG)) &gt; 1e-6,1)
+0221     fprintf(<span class="string">'Biomass contains some generic groups.\n'</span>);
+0222 <span class="keyword">end</span>
+0223 
+0224 <span class="keyword">end</span>
+0225 
+0226 <a name="_sub1" href="#_subfunctions" class="code">function [mw, elRes, stRes] = MW(form)</a>
+0227 <span class="comment">%Return the molecular weight for the cell array or string of formula 'form'</span>
+0228 <span class="comment">%The formulas must not have '(' and ')'.</span>
+0229 <span class="comment">%Must be an elemental symbol followed by a number.</span>
+0230 <span class="comment">%</span>
+0231 <span class="comment">%Output:</span>
+0232 <span class="comment">%  mw:      molecular weight, in g/mol</span>
+0233 <span class="comment">%  elRes:   Unrecognized elements in form. MW assumes zero weight for them.</span>
+0234 <span class="comment">%  stRes:   the elemental matrix for the columns corresponding to elRes</span>
+0235 <span class="comment">%</span>
+0236 <span class="comment">%Siu Hung Joshua Chan Nov 2016</span>
+0237 
+0238 [~,element, metEle] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(form);
+0239 H = 1.00794; He = 4.002602; Li = 6.941; Be = 9.012182; B = 10.811; C = 12.011; N = 14.00674;
+0240 O = 15.9994; F = 18.9984032; Ne = 20.1797; Na = 22.989768; Mg = 24.305; Al = 26.981539; Si = 28.0855;
+0241 P = 30.973762; S = 32.066; Cl = 35.4527; Ar = 39.948; K = 39.0983; Ca = 40.078; Sc = 44.95591;
+0242 Ti = 47.88; V = 50.9415; Cr = 51.9961; Mn = 54.93805; Fe = 55.847; Co = 58.9332; Ni = 58.69;
+0243 Cu = 63.546; Zn = 65.39; Ga = 69.723; Ge = 72.61; As = 74.92159; Se = 78.96; Br = 79.904; Kr = 83.8;
+0244 Rb = 85.4678; Sr = 87.62; Y = 88.90585; Zr = 91.224; Nb = 92.90638; Mo = 95.94; Tc = 98.9063;
+0245 Ru = 101.07; Rh = 102.9055; Pd = 106.42; Ag = 107.8682; Cd = 112.411; In = 114.82; Sn = 118.71;
+0246 Sb = 121.75; Te = 127.6; I = 126.90447; Xe = 131.29; Cs = 132.90543; Ba = 137.327; La = 138.9055;
+0247 Ce = 140.115; Pr = 140.90765; Nd = 144.24; Pm = 146.9151; Sm = 150.36; Eu = 151.965; Gd = 157.25;
+0248 Tb = 158.92534; Dy = 162.5; Ho = 164.93032; Er = 167.26; Tm = 168.93421; Yb = 173.04; Lu = 174.967;
+0249 Hf = 178.49; Ta = 180.9479; W = 183.85; Re = 186.207; Os = 190.2; Ir = 192.22; Pt = 195.08;
+0250 Au = 196.96654; Hg = 200.59; Tl = 204.3833; Pb = 207.2; Bi = 208.98037; Po = 208.9824; At = 209.9871;
+0251 Rn = 222.0176; Ac = 223.0197; Th = 226.0254; Pa = 227.0278; U = 232.0381; Np = 231.0359; Pu = 238.0289;
+0252 Am = 237.0482; Cm = 244.0642; Bk = 243.0614; Cf = 247.0703; Es = 247.0703; Fm = 251.0796; Md = 252.0829;
+0253 No = 257.0951; Lr = 258.0986; Rf = 259.1009; Db = 260.1053; Sg = 261.1087; Bh = 262.1138; Hs = 263.1182;
+0254 Mt = 262.1229;
+0255 <span class="comment">% Unamed = NaN;</span>
+0256 residue = false(numel(element),1);
+0257 <span class="keyword">for</span> j = 1:numel(element)
+0258     <span class="keyword">if</span> ~exist(element{j}, <span class="string">'var'</span>)
+0259         residue(j) = true;
+0260     <span class="keyword">end</span>
+0261 <span class="keyword">end</span>
+0262 <span class="keyword">if</span> all(residue)
+0263     mw = NaN(size(metEle,1),1);
+0264 <span class="keyword">else</span>
+0265     v = [<span class="string">'[ '</span> strjoin(element(~residue), <span class="string">' '</span>) <span class="string">' ]'</span>];
+0266     eval([<span class="string">'mw = metEle(:,~residue) * '</span> v <span class="string">''';'</span>]);
+0267     mw(mw == 0) = NaN;
+0268 <span class="keyword">end</span>
+0269     elRes = element(residue);
+0270     stRes = metEle(:, residue);
+0271 <span class="keyword">end</span></pre></div>
+<hr><address>Generated on Tue 09-May-2017 12:37:40 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2003</address>
+</body>
+</html>

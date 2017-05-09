@@ -6,16 +6,13 @@
   <meta name="keywords" content="MW">
   <meta name="description" content="Return the molecular weight for the cell array or string of formula 'form'">
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-  <meta name="generator" content="m2html &copy; 2005 Guillaume Flandin">
+  <meta name="generator" content="m2html &copy; 2003 Guillaume Flandin">
   <meta name="robots" content="index, follow">
   <link type="text/css" rel="stylesheet" href="../../m2html.css">
-  <script type="text/javascript">
-    if (top.frames.length == 0) { top.location = "../../index.html"; };
-  </script>
 </head>
 <body>
 <a name="_top"></a>
-<!-- ../menu.html functions --><!-- menu.html auxiliary_functions -->
+<!-- ../menu.html MatlabCobraToolbox --><!-- menu.html auxiliary_functions -->
 <h1>MW
 </h1>
 
@@ -27,7 +24,7 @@
 
 <h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
 <div class="fragment"><pre class="comment">Return the molecular weight for the cell array or string of formula 'form'
-The formulas must not have '(' and ')'.
+Support parentheses/brackets.
 Must be an elemental symbol followed by a number.
 
 Output:
@@ -41,18 +38,17 @@ Siu Hung Joshua Chan Nov 2016</pre></div>
 <h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
 This function calls:
 <ul style="list-style-image:url(../../matlabicon.gif)">
-<li><a href="../../functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>	Check the elemental balance of the reactions in the COBRA mode 'model'.</li></ul>
+<li><a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>	Check the elemental balance of the reactions in the COBRA mode 'model'.</li></ul>
 This function is called by:
 <ul style="list-style-image:url(../../matlabicon.gif)">
-<li><a href="../../functions/computeMetMWrange.html" class="code" title="function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,param)">computeMetMWrange</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li></ul>
+<li><a href="../../MatlabCobraToolbox/computeMetMWrange.html" class="code" title="function [metMWrange,metForm,ele,metEle,rxnBal,infeasibility,inconUB,sol,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,varargin)">computeMetMWrange</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li><li><a href="../../MatlabCobraToolbox/computeMetMWrange0.html" class="code" title="function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP,sol] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,varargin)">computeMetMWrange0</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li><li><a href="../../MatlabCobraToolbox/computeMetMWrangeCplex.html" class="code" title="function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrangeCplex(model,metKnown,metInterest,rxns,percent,param)">computeMetMWrangeCplex</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li></ul>
 <!-- crossreference -->
-
 
 
 <h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
 <div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [mw, elRes, stRes] = MW(form)</a>
 0002 <span class="comment">%Return the molecular weight for the cell array or string of formula 'form'</span>
-0003 <span class="comment">%The formulas must not have '(' and ')'.</span>
+0003 <span class="comment">%Support parentheses/brackets.</span>
 0004 <span class="comment">%Must be an elemental symbol followed by a number.</span>
 0005 <span class="comment">%</span>
 0006 <span class="comment">%Output:</span>
@@ -62,7 +58,7 @@ This function is called by:
 0010 <span class="comment">%</span>
 0011 <span class="comment">%Siu Hung Joshua Chan Nov 2016</span>
 0012 
-0013 [~,element, metEle] = <a href="../../functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(form);
+0013 [~,element, metEle] = <a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(form);
 0014 H = 1.00794; He = 4.002602; Li = 6.941; Be = 9.012182; B = 10.811; C = 12.011; N = 14.00674;
 0015 O = 15.9994; F = 18.9984032; Ne = 20.1797; Na = 22.989768; Mg = 24.305; Al = 26.981539; Si = 28.0855;
 0016 P = 30.973762; S = 32.066; Cl = 35.4527; Ar = 39.948; K = 39.0983; Ca = 40.078; Sc = 44.95591;
@@ -96,6 +92,6 @@ This function is called by:
 0044     elRes = element(residue);
 0045     stRes = metEle(:, residue);
 0046 <span class="keyword">end</span></pre></div>
-<hr><address>Generated on Fri 14-Apr-2017 17:13:46 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2005</address>
+<hr><address>Generated on Tue 09-May-2017 12:37:40 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2003</address>
 </body>
 </html>

@@ -1,4 +1,4 @@
-function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM,nameCM,param)
+function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM,nameCM,param)
 % Compute the chemical formulas of the unknown metabolites 
 % using a set of metabolites with known formulae and a set of reactions.
 % To include charge balance in the computation, simply in all formulas, add
@@ -6,7 +6,7 @@ function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillM
 % capitalized and 'harge' must be in lower case.
 % The minimum conflict is found by allowing filling up by metFill (e.g. proton) in the reaction stoichiometry
 %
-% [model,metCompute,S_fill,rxnBal,ele,metEle,N] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM);
+% [model,metCompute,S_fill,rxnBal,ele,metEle,N] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM);
 % Input:
 %   model:              COBRA model
 %   metKnown:           known metabolites (character array or IDs)
@@ -103,20 +103,18 @@ if any(metKform)
 end
 %All formulas must be in the form of e.g. Abc2Bcd1. Elements are
 %represented by one capital letter followed by lower case letter or
-%underscore, followed by a number for the stoichiometry. No brackets or
-%other symbols allowed.
+%underscore, followed by a number for the stoichiometry. 
+%Brackets/parentheses are also supported.
 [metK,metKform] = deal(metK(~metKform), model.metFormulas(metK(~metKform)));
-re = regexp(metKform,'[A-Z][a-z_]*(\-?\d+\.?\d*)?','match');
-re = cellfun(@(x) strjoin(x,''),re,'UniformOutput',false);
-goodForm = strcmp(strtrim(re), strtrim(metKform));
-if ~all(goodForm)
-    goodForm = find(~goodForm,1);
-    error('%s has an invalid formula %s\n',metKnown{goodForm},metKform{goodForm});
-end
-% [ynF,idF] = ismember(metFill,metK);
-% if ~all(ynF)
-%     error('''%s'' in ''metFill'' is not in ''metKnown''.',strjoin(model.mets(metFill(~ynF)),''', '''));
+%%Now handled by checkEleBalance
+% re = regexp(metKform,'[A-Z][a-z_]*(\-?\d+\.?\d*)?','match');
+% re = cellfun(@(x) strjoin(x,''),re,'UniformOutput',false);
+% goodForm = strcmp(strtrim(re), strtrim(metKform));
+% if ~all(goodForm)
+%     goodForm = find(~goodForm,1);
+%     error('%s has an invalid formula %s\n',metKnown{goodForm},metKform{goodForm});
 % end
+
 %% minimum inconsistency
 %formulas for known metabolites
 [~,eleK,metEleK] = checkEleBalance(metKform);
@@ -125,19 +123,23 @@ end
 if numel(eleK) > size(metEleK,2)
     metEleK = [metEleK, zeros(size(metEleK,1), numel(eleK) - size(metEleK,2))];
 end
-eleCh = strcmp(eleK,'Charge');
-m = size(model.S,1);
-nE = numel(eleK);
-mK = numel(metK);
-mU = m - mK;
-mF = numel(metFill);
-metU = setdiff((1:m)',metK);
-nR = numel(rxnC);
+eleCh = strcmp(eleK,'Charge'); %index for charge coloumn
+m = size(model.S,1); %number of mets
+nE = numel(eleK); %number of elements
+mK = numel(metK); %number of known mets
+mU = m - mK; %number of unknown mets
+mF = numel(metFill); %number of filling mets
+metU = setdiff((1:m)',metK); %index for unknown mets
+nR = numel(rxnC); %number of reactions that should be mass balanced
+%variable name for the stoichiometry for each element of each met
 nameM = strcat(repmat(model.mets(metU), nE,1),'_', reshape(repmat(eleK(:)',mU,1),nE*mU,1));
+%constraint name for the balance of each element in each rxn
 nameR = strcat(repmat(model.rxns(rxnC), nE,1),'_', reshape(repmat(eleK(:)',nR,1),nE*nR,1));
 if mF > 0
+    %variable name for each filling met for each rxn
     nameF = strcat(repmat(metFill(:), nR,1),'_', reshape(repmat(model.rxns(rxnC)',mF,1),mF*nR,1));
 end
+
 LP = Cplex();
 %n_ik, stoichoimetry for element k in met i
 LP.addCols(zeros(mU*nE,1),[],zeros(mU*nE,1),inf(mU*nE,1),[],char(nameM));

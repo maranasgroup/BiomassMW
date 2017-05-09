@@ -1,30 +1,30 @@
 function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)
 %Check the elemental balance of the reactions in the COBRA mode 'model'.
-%Call option 1:
-%[EleBal, element, metEle] = checkEleBalance(model)
-%'metFormulas' must be a field in 'model'. The formulas must not have '(' and ')'.
-%Must be an elemental symbol followed by a number. For charges, just
-%include them in the formulas as 'Charge-1' or 'Charge2' etc.
 %
-%Return the following:
+%[EleBal, element, metEle] = checkEleBalance(model)
+%'metFormulas' must be a field in 'model'. Support parentheses/brackets.
+%Each element must start with a capital letter followed by lowercase letters or '_', followed by a number. 
+%For charges, just include them in the formulas as 'Charge-1' or 'Charge2' etc.
 %  'EleBal' is the elemental balance of each element in 'element' for each
 %    reaction, (nE x nR matrix)
 %  'element' is nE x 1 cell array of elements detected in model.metFormulas
 %  'metEle' is the elemental composition of metabolites (nM x nE matrix)
 %     metEle(m,e) is the stoichiometry of element e in metabolite m
 %
-%Call option 2:
 %[EleBal, element, metEle] = checkEleBalance(metFormulas)
 %The first argument can also be 'metFormulas', nM x 1 cell array of strings and 'S' nM x nR matrix 
 % In this case, only 'element' and 'metEle' is returned 'EleBal' would be empty.
 %
-%Call option 3:
-%[EleBal, element, metEle] = checkEleBalance(model, element, metEle)
+%[EleBal, element, metEle] = checkEleBalance(model/metFormulas, element, metEle)
 % If you already have 'element' and 'metEle' from previous runs, this
 % includes the newly calculated formulas for metabolites in 'model' into 
 % 'element' and 'metEle'
 %
-%Siu Hung Joshua Chan Nov 2016
+%e.g., [~, element,metEle] = checkEleBalance({'H2O'; '[H2O]2(CuSO4)'}) would return:
+%  element = {'H';'O';'Cu';'S'}
+%  metEle = [2, 1, 0, 0; 4, 6, 1, 1]
+%
+%Siu Hung Joshua Chan May 2017
 
 if nargin < 4
     selfCall = false;
@@ -48,7 +48,7 @@ if ~exist('element', 'var')
     element = {};
 elseif isempty(element)
     element = {};
-elseif exist('metEle', 'var') && numel(element) ~= size(metEle, 2)
+elseif exist('metEle', 'var') && ~isempty(metEle) && numel(element) ~= size(metEle, 2)
     error('number of elements in metEle and element are not the same.')
 elseif numel(unique(element)) < numel(element)
     error('Repeated elements in the input ''element'' array.')
@@ -139,7 +139,7 @@ for j = 1:numel(form)
                 if errorFlag == 1
                     error(['#%d: Invalid chemical formula. Only ''%s'' can be recognized' ...
                         ' from %s.\n'...
-                        'Each element should start with a capital letter followed by lower case letters'...
+                        'Each element should start with a capital letter followed by lower case letters '...
                         'or ''_'' with indefinite length and followed by a number.\n'],...
                         j, s, s2)
                 elseif errorFlag == 2
@@ -182,12 +182,14 @@ for j = 1:numel(form)
             end
             for k = 1:size(parenthesis,1)
                 [~, element,metEleJ] = checkEleBalance(form{j}(...
-                    (parenthesis(k,1)+1):(parenthesis(k,2)-1)),element,true);
+                    (parenthesis(k,1)+1):(parenthesis(k,2)-1)),element,[],true);
                 metEle(j,1:numel(element)) = metEle(j,1:numel(element)) + metEleJ * stP(k);
                 rest(parenthesis(k,1):stPpos(k,2)) = false;
             end
-            [~, element,metEleJ] = checkEleBalance(form{j}(rest),element,true);
-            metEle(j,1:numel(element)) = metEle(j,1:numel(element)) + metEleJ;
+            if any(rest)
+                [~, element,metEleJ] = checkEleBalance(form{j}(rest),element,[],true);
+                metEle(j,1:numel(element)) = metEle(j,1:numel(element)) + metEleJ;
+            end
             formTopLv = '';
         end
     elseif calc(j)

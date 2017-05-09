@@ -1,6 +1,6 @@
 function [mw, elRes, stRes] = MW(form)
 %Return the molecular weight for the cell array or string of formula 'form'
-%The formulas must not have '(' and ')'.
+%Support parentheses/brackets.
 %Must be an elemental symbol followed by a number.
 %
 %Output:

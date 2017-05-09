@@ -2,28 +2,25 @@
                 "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 <head>
-  <title>Description of computeFormulasFillMets</title>
-  <meta name="keywords" content="computeFormulasFillMets">
+  <title>Description of computeFormulasFillMetsCplex</title>
+  <meta name="keywords" content="computeFormulasFillMetsCplex">
   <meta name="description" content="Compute the chemical formulas of the unknown metabolites">
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-  <meta name="generator" content="m2html &copy; 2005 Guillaume Flandin">
+  <meta name="generator" content="m2html &copy; 2003 Guillaume Flandin">
   <meta name="robots" content="index, follow">
   <link type="text/css" rel="stylesheet" href="../m2html.css">
-  <script type="text/javascript">
-    if (top.frames.length == 0) { top.location = "../index.html"; };
-  </script>
 </head>
 <body>
 <a name="_top"></a>
-<!-- menu.html functions -->
-<h1>computeFormulasFillMets
+<!-- menu.html MatlabCobraToolbox -->
+<h1>computeFormulasFillMetsCplex
 </h1>
 
 <h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
 <div class="box"><strong>Compute the chemical formulas of the unknown metabolites</strong></div>
 
 <h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
-<div class="box"><strong>function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM,nameCM,param) </strong></div>
+<div class="box"><strong>function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM,nameCM,param) </strong></div>
 
 <h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
 <div class="fragment"><pre class="comment"> Compute the chemical formulas of the unknown metabolites 
@@ -33,7 +30,7 @@
  capitalized and 'harge' must be in lower case.
  The minimum conflict is found by allowing filling up by metFill (e.g. proton) in the reaction stoichiometry
 
- [model,metCompute,S_fill,rxnBal,ele,metEle,N] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM);
+ [model,metCompute,S_fill,rxnBal,ele,metEle,N] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM);
  Input:
    model:              COBRA model
    metKnown:           known metabolites (character array or IDs)
@@ -63,7 +60,7 @@
 <h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
 This function calls:
 <ul style="list-style-image:url(../matlabicon.gif)">
-<li><a href="../functions/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>	Check the feasibility of a solution given a COBRA model structure or a CPLEX dynamic object and a solution</li><li><a href="../functions/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>	Convert the matrix form of the chemical formulae into string form</li><li><a href="../functions/auxiliary_functions/setCplexParam.html" class="code" title="function LP = setCplexParam(LP, solverParam,verbFlag)">setCplexParam</a>	Set the parameters of the CPLEX object according to the structure solverParam</li><li><a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>	Check the elemental balance of the reactions in the COBRA mode 'model'.</li></ul>
+<li><a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>	Check the elemental balance of the reactions in the COBRA mode 'model'.</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>	Check the feasibility of a solution given a COBRA model structure or a CPLEX dynamic object and a solution</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>	Convert the matrix form of the chemical formulae into string form</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/setCplexParam.html" class="code" title="function LP = setCplexParam(LP, solverParam,verbFlag)">setCplexParam</a>	Set the parameters of the CPLEX object according to the structure solverParam</li></ul>
 This function is called by:
 <ul style="list-style-image:url(../matlabicon.gif)">
 </ul>
@@ -72,9 +69,8 @@ This function is called by:
 <h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
 <ul style="list-style-image:url(../matlabicon.gif)">
 <li><a href="#_sub1" class="code">function s = num2alpha(index,charSet)</a></li></ul>
-
 <h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
-<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM,nameCM,param)</a>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM,nameCM,param)</a>
 0002 <span class="comment">% Compute the chemical formulas of the unknown metabolites</span>
 0003 <span class="comment">% using a set of metabolites with known formulae and a set of reactions.</span>
 0004 <span class="comment">% To include charge balance in the computation, simply in all formulas, add</span>
@@ -82,7 +78,7 @@ This function is called by:
 0006 <span class="comment">% capitalized and 'harge' must be in lower case.</span>
 0007 <span class="comment">% The minimum conflict is found by allowing filling up by metFill (e.g. proton) in the reaction stoichiometry</span>
 0008 <span class="comment">%</span>
-0009 <span class="comment">% [model,metCompute,S_fill,rxnBal,ele,metEle,N] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM);</span>
+0009 <span class="comment">% [model,metCompute,S_fill,rxnBal,ele,metEle,N] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM);</span>
 0010 <span class="comment">% Input:</span>
 0011 <span class="comment">%   model:              COBRA model</span>
 0012 <span class="comment">%   metKnown:           known metabolites (character array or IDs)</span>
@@ -195,9 +191,9 @@ This function is called by:
 0119 <span class="comment">% end</span>
 0120 <span class="comment">%% minimum inconsistency</span>
 0121 <span class="comment">%formulas for known metabolites</span>
-0122 [~,eleK,metEleK] = <a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metKform);
+0122 [~,eleK,metEleK] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metKform);
 0123 <span class="comment">%formulas for filling metabolites</span>
-0124 [~,eleK,metEleF] = <a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metFill, eleK);
+0124 [~,eleK,metEleF] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metFill, eleK);
 0125 <span class="keyword">if</span> numel(eleK) &gt; size(metEleK,2)
 0126     metEleK = [metEleK, zeros(size(metEleK,1), numel(eleK) - size(metEleK,2))];
 0127 <span class="keyword">end</span>
@@ -265,12 +261,12 @@ This function is called by:
 0189         param.simplex.tolerances.(CplexParamList{j}) = cobraParam.(cobraParamList{j});
 0190     <span class="keyword">end</span>
 0191 <span class="keyword">end</span>
-0192 LP = <a href="../functions/auxiliary_functions/setCplexParam.html" class="code" title="function LP = setCplexParam(LP, solverParam,verbFlag)">setCplexParam</a>(LP,param);
+0192 LP = <a href="../MatlabCobraToolbox/auxiliary_functions/setCplexParam.html" class="code" title="function LP = setCplexParam(LP, solverParam,verbFlag)">setCplexParam</a>(LP,param);
 0193 feasTol = LP.Param.simplex.tolerances.feasibility.Cur;
 0194 <span class="comment">%Solve</span>
 0195 LP.solve;
 0196 <span class="comment">%manually check feasibility</span>
-0197 feas = <a href="../functions/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP);
+0197 feas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP);
 0198 
 0199 <span class="keyword">if</span> ~(feas &lt;= feasTol)
 0200     <span class="keyword">if</span> isfield(LP.Solution,<span class="string">'x'</span>)
@@ -323,7 +319,7 @@ This function is called by:
 0247 <span class="comment">%solve</span>
 0248 LP.solve;
 0249 <span class="comment">%check feasibility</span>
-0250 feas = <a href="../functions/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP);
+0250 feas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP);
 0251 metEle = zeros(numel(model.mets),numel(eleK));
 0252 metEle(metK,:) = metEleK;
 0253 <span class="keyword">if</span> feas &lt;= feasTol
@@ -399,7 +395,7 @@ This function is called by:
 0323     ele = eleK(:);
 0324 <span class="keyword">end</span>
 0325 rxnBal = metEle' * model.S;
-0326 model.metFormulas = <a href="../functions/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,metEle,10);
+0326 model.metFormulas = <a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,metEle,10);
 0327 <span class="keyword">if</span> nameCM &gt; 0 &amp;&amp; findCM ~= 0
 0328     <span class="comment">%manually name conserved moieties</span>
 0329     ele0 = ele;
@@ -441,7 +437,7 @@ This function is called by:
 0365             <span class="keyword">if</span> cont
 0366                 <span class="comment">%get the matrix for the input formula</span>
 0367                 nEnew = numel(ele) - nE - nCM;
-0368                 [~, eleJ, metEleJ] = <a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(s,ele([1:nE, (nE+nCM+1):end]));
+0368                 [~, eleJ, metEleJ] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(s,ele([1:nE, (nE+nCM+1):end]));
 0369                 metEle(:,[1:nE, (nE+nCM+1):end]) = metEle(:,[1:nE, (nE+nCM+1):end])<span class="keyword">...</span>
 0370                         + metEle(:,nE+j) * metEleJ(1,1:(nE+nEnew));
 0371                 <span class="keyword">if</span> numel(eleJ) &gt; nE + nEnew
@@ -494,7 +490,7 @@ This function is called by:
 0418         ele{nE+j} = nameJ;
 0419     <span class="keyword">end</span>
 0420 <span class="keyword">end</span>
-0421 model.metFormulas = <a href="../functions/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,metEle,10);
+0421 model.metFormulas = <a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,metEle,10);
 0422 metCompute = [model.mets(metU) model.metFormulas(metU)];
 0423 <span class="keyword">end</span>
 0424 
@@ -526,6 +522,6 @@ This function is called by:
 0450 <span class="keyword">end</span>
 0451 s = [charSet(mod(index,N) + 1) s];
 0452 <span class="keyword">end</span></pre></div>
-<hr><address>Generated on Fri 14-Apr-2017 17:13:46 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2005</address>
+<hr><address>Generated on Tue 09-May-2017 12:37:40 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2003</address>
 </body>
 </html>

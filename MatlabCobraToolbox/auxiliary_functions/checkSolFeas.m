@@ -59,12 +59,12 @@ if ~isa(LP, 'Cplex')
         return
     end
     if isfield(LP, 'sense')
-        cs = LP.csense; %gurobi
+        cs = LP.sense; %gurobi
         E = '=';
         L = '<';
         G = '>';
     elseif isfield(LP,'csense')
-        cs = LP.sense; %COBRA
+        cs = LP.csense; %COBRA
         E = 'E';
         L = 'L';
         G = 'G';

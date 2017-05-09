@@ -73,18 +73,3 @@ h2 {
 address {
 	font-size:small;
 }
-
-form.search {
-	margin-bottom: 0px;
-	margin-top: 0px;
-}
-input.search {
-	font-size: 75%;
-	color: #000080;
-	font-weight: normal;
-	background-color: #eeeeff;
-}
-
-li {
-    padding-left:5px;
-}

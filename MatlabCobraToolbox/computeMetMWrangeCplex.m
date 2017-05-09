@@ -1,4 +1,4 @@
-function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,param)
+function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrangeCplex(model,metKnown,metInterest,rxns,percent,param)
 % Compute the minimum and maximum molecular weight (MW) of a metabolie
 % given a set of formulas for the known metabolites using a set of reactions. 
 % Done by first minimizing the mass-and-charge imbalance. Then fixing the 
@@ -73,16 +73,17 @@ if any(metKform)
 end
 %All formulas must be in the form of e.g. Abc2Bcd1. Elements are
 %represented by one capital letter followed by lower case letter or
-%underscore, followed by a number for the stoichiometry. No brackets or
-%other symbols allowed.
+%underscore, followed by a number for the stoichiometry. 
+%Brackets/parentheses are also supported.
 [metK,metKform] = deal(metK(~metKform), model.metFormulas(metK(~metKform)));
-re = regexp(metKform,'[A-Z][a-z_]*(\-?\d+\.?\d*)?','match');
-re = cellfun(@(x) strjoin(x,''),re,'UniformOutput',false);
-goodForm = strcmp(re, strtrim(metKform));
-if ~all(goodForm)
-    goodForm = find(~goodForm,1);
-    error('%s has an invalid formula %s\n',metKnown{goodForm},metKform{goodForm});
-end
+%Now handled by checkEleBalance
+% re = regexp(metKform,'[A-Z][a-z_]*(\-?\d+\.?\d*)?','match');
+% re = cellfun(@(x) strjoin(x,''),re,'UniformOutput',false);
+% goodForm = strcmp(re, strtrim(metKform));
+% if ~all(goodForm)
+%     goodForm = find(~goodForm,1);
+%     error('%s has an invalid formula %s\n',metKnown{goodForm},metKform{goodForm});
+% end
 
 %% minimum inconsistency
 [~,ele,metEleK] = checkEleBalance(metKform);
