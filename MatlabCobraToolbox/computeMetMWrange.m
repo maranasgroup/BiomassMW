@@ -29,7 +29,7 @@ function [metMWrange,metForm,ele,metEle,rxnBal,infeasibility,inconUB,sol,LP] = c
 %  with .minIncon, .minMW, .maxMW, corresponding to the results from
 %  min. inconsistency, min. molecular weight and max. molecular weight)
 %    metEle        Chemical formulae in a #mets by #elements matrix
-%    rxnBal        imbalance of each reaction (#elements x #rxns matrix)
+%    rxnBal        Elemental balance of each reaction (#elements x #rxns matrix)
 %    infeasibility Infeasibility from the corresponding optimization (#elements x 1 vector)
 %    inconUB       the maximum allowed inconsistency used to obtain solutions (#elements x 1 vector)
 %    sol           #elements x 1 solution structure array returned by solveCobraLP
@@ -78,13 +78,14 @@ end
 %underscore, followed by a number for the stoichiometry. No brackets or
 %other symbols allowed.
 [metK,metKform] = deal(metK(~metKform), model.metFormulas(metK(~metKform)));
-re = regexp(metKform,'[A-Z][a-z_]*(\-?\d+\.?\d*)?','match');
-re = cellfun(@(x) strjoin(x,''),re,'UniformOutput',false);
-goodForm = strcmp(re, strtrim(metKform));
-if ~all(goodForm)
-    goodForm = find(~goodForm,1);
-    error('%s has an invalid formula %s\n',metKnown{goodForm},metKform{goodForm});
-end
+%%Now handled by checkEleBalance
+% re = regexp(metKform,'[A-Z][a-z_]*(\-?\d+\.?\d*)?','match');
+% re = cellfun(@(x) strjoin(x,''),re,'UniformOutput',false);
+% goodForm = strcmp(re, strtrim(metKform));
+% if ~all(goodForm)
+%     goodForm = find(~goodForm,1);
+%     error('%s has an invalid formula %s\n',metKnown{goodForm},metKform{goodForm});
+% end
 %get feasibility tolerance
 if isstruct(varargin{1}) && isfield(varargin{1}, 'feasTol')
     feasTol = varargin{1}.feasTol;
@@ -125,10 +126,11 @@ LP.csense = [char('E' * ones(1, nR)), 'L'];
 %molecular weight of each element
 cMW = MW(ele);
 %chemical formulae
-[metEle.minIncon, metEle.minMW, metEle.maxMW] = deal(NaN(numel(model.mets),numel(ele)));
+[metEle.minIncon, metEle.minMW, metEle.maxMW] = deal(NaN(m, nE));
 [metEle.minIncon(metK,:), metEle.minMW(metK,:), metEle.maxMW(metK,:)] = deal(metEleK);
-%save bases for reuse
-[feasible.minIncon, feasible.minMW, feasible.maxMW] = deal(true(nE,1));
+%infeasibility of each solve
+[infeasibility.minIncon, infeasibility.minMW, infeasibility.maxMW] = deal(true(nE,1));
+%bound on the total inconsistency allowed
 [inconUB.minMW, inconUB.maxMW] = deal(zeros(nE, 1));
 for j = 1:nE
     LP.A(end,:) = 0;
@@ -167,7 +169,7 @@ for j = 1:nE
             %solve for minimum molecular weight
             LP.osense = 1;
             %reuse the basis if it exists.
-            if isfield(sol, 'basis')
+            if isfield(sol.minIncon(j), 'basis')
                 LP.basis = sol.minIncon(j).basis;
             end
             f = 1e-6;

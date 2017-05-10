@@ -58,6 +58,9 @@ if ~isa(LP, 'Cplex')
         varargout = {[]};
         return
     end
+    E = 'E';
+    L = 'L';
+    G = 'G';
     if isfield(LP, 'sense')
         cs = LP.sense; %gurobi
         E = '=';
@@ -65,15 +68,9 @@ if ~isa(LP, 'Cplex')
         G = '>';
     elseif isfield(LP,'csense')
         cs = LP.csense; %COBRA
-        E = 'E';
-        L = 'L';
-        G = 'G';
     else
         %COBRA model, no csense, assume all equal
         cs = char('E' * ones(size(A,1),1));
-        E = 'E';
-        L = 'L';
-        G = 'G';
     end
    %check field in sol
     if isstruct(sol)
