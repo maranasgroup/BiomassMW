@@ -495,7 +495,7 @@ elseif max([infeasibility.minFill]) <= feasTol
 elseif max([infeasibility.minIncon]) <= feasTol
     solChoice = 'minIncon';
 else
-    fprintf('No any feasible solution can be found. Problematic.')
+    fprintf('No feasible solution can be found. Problematic.')
     metCompute = {};
     solInfo.stat = 'none';
     return
