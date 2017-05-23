@@ -1,4 +1,4 @@
-function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM,nameCM,param)
+function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeMetFormulaeCplex(model,metKnown,rxns,metFill,findCM,nameCM,param)
 % Compute the chemical formulas of the unknown metabolites 
 % using a set of metabolites with known formulae and a set of reactions.
 % To include charge balance in the computation, simply in all formulas, add
@@ -9,17 +9,17 @@ function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillM
 % [model,metCompute,S_fill,rxnBal,ele,metEle,N] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM);
 % Input:
 %   model:              COBRA model
-%   metKnown:           known metabolites (character array or IDs)
-%   rxns:               the set of reactions for inferring formulae (character array or IDs)
-%   metFill:            the chemical formulas for compounds for freely filling the
+%   metKnown:           Known metabolites (character array or IDs)
+%   rxns:               Set of reactions for inferring formulae (character array or IDs)
+%   metFill:            Chemical formulas for compounds for freely filling the
 %                       imbalance, e.g. {'HCharge1', 'H2O'}
-%   findCM = 'efmtool': find conserved moieties using EFMtool (most comprehensive, 
+%   findCM = 'efmtool': Find conserved moieties using EFMtool (most comprehensive, 
 %                       but computational cost may be high.)  
 %                       (default, if EFMtool not in path, switch to rational basis)
-%   findCM = true  :    find conserved moieties and add into formulas using the rational basis of model.S'
-%   findCM = N     :    directly supply the rational basis for N(S') or 
+%          = 'null'   : Find conserved moieties and add into formulas using the rational basis of model.S'
+%          = N        : Directly supply the rational basis for N(S') or 
 %                       the set of extreme rays for {n | n * S = 0, n >= 0}
-%   findCM = false :    not to find conserved moieties and return minimal formulas
+%          = false    : Not to find conserved moieties and return minimal formulas
 % Output:
 %   model:          COBRA model with updated formulas
 %   metCompute:     M_unknown x 2 array of cell with [mets | computed formulas]
@@ -33,16 +33,18 @@ function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillM
 %   N:              the extreme ray or rational null space matrix
 
 %[model,metCompute,S_fill,rxnBal,ele,metEle,N] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM,nameCM);
-% nameCM = 0 the program assigns default names for conserved moieties
+% nameCM = 0 The program assigns default names for conserved moieties
 %            (Conserve_a, Conserve_b, ...)
-% nameCM = 1 to name true conserved moieties interactively (exclude dead end mets). 
-% nameCM = 2 to name all (including dead end)
+%        = 1 To name true conserved moieties interactively (exclude dead end mets). 
+%        = 2 To name all (including dead end)
 %
 % [model,metCompute,rxnBal,ele,metEle,N,LP] = computeFormulas(...)
 % Return also the CPLEX optimization object 'LP'
 
-%check mets with formulas that need to be transformed
-%form0 = model.metFormulas;
+%As an internal parameter deciding to include dead end metabolites or not
+%when calculating conserved moieties
+deadCM = true;
+
 if ~isfield(model,'metFormulas')
     error('model does not have the field ''metFormulas.''')
 end
@@ -264,45 +266,63 @@ end
 
 
 %% find conserved moieties
-if nargin < 4 || isempty(findCM)
-    findCM = true;
+if nargin < 4 || isempty(findCM) || (numel(findCM) == 1 && findCM)
+    findCM = 'efmtool';
 end
-cont = true;
-if ischar(findCM) && strcmpi(findCM,'efmtool')
+CMfound = false;
+N = [];
+if size(findCM,1) == numel(model.mets)
+    %input is the null space matrix / set of extreme rays
+    N = findCM;
+    CMfound = true;
+elseif ~ischar(findCM) && numel(findCM) > 1
+    warning('Input extreme ray matrix has #rows (%d) different from #mets (%d). Ignore.', size(findCM,1), numel(model.mets));
+    findCM = 'efmtool';
+end
+if ~CMfound && ischar(findCM) && strcmpi(findCM, 'efmtool')
     %use EFMtool
     pathEFM = which('CalculateFluxModes.m');
     if isempty(pathEFM)
         warning('EFMtool not in Matlab path. Use rational basis.');
+        findCM = 'null';
     else
         dirEFM = strsplit(pathEFM,filesep);
         dirEFM = strjoin(dirEFM(1:end-1),filesep);
         dirCur = pwd;
         cd(dirEFM);
-        %will very probably fail due to lack of memory if there are many
-        %dead end metabolites, may add code to remove deadend mets first
-        %         [~,removedMets] = removeDeadEnds(model);
-        %         metDead = findMetIDs(model,removedMets);
-        N = CalculateFluxModes(full(model.S'),zeros(numel(model.mets),1));
-        N = N.efms;
+        if deadCM
+            N = CalculateFluxModes(full(model.S'),zeros(numel(model.mets),1));
+            N = N.efms;
+        else
+            %may fail due to lack of memory if there are a lot of dead end 
+            %metabolites, may add code to remove deadend mets first
+            [~,removedMets] = removeDeadEnds(model);
+            metActive = true(numel(model.mets), 1);
+            metActive(findMetIDs(model,removedMets)) = false;
+            N_active = CalculateFluxModes(full(model.S(metActive,:)'),zeros(sum(metActive),1));
+            N = zeros(numel(model.mets), size(N_active.efms,2));
+            N(metActive,:) = N_active.efms;
+        end
         cd(dirCur);
-        cont = false;
+        CMfound = true;
     end
-    findCM = true;
 end
-if cont
-    if size(findCM,1) == numel(model.mets)
-        %input is the null space matrix / set of extreme rays
-        N = findCM;
-        findCM = true;
-    elseif numel(findCM) == 1 && findCM
+if ~CMfound && ischar(findCM) && strcmpi(findCM, 'null')
+    %matlab rational basis
+    if deadCM
         N = null(full(model.S'),'r');
     else
-        N = [];
+        [~,removedMets] = removeDeadEnds(model);
+        metActive = true(numel(model.mets), 1);
+        metActive(findMetIDs(model,removedMets)) = false;
+        N_active = null(full(model.S(metActive,:)'),'r');
+        N = zeros(numel(model.mets), size(N_active, 2));
+        N(metActive,:) = N_active;
     end
+    CMfound = true;
 end
-if findCM
-    fprintf('Find conserved moieties...\n');
-    
+if CMfound
+    fprintf('Conserved moieties found.\n');    
     %clear close-to-zero values
     N(abs(N) < 1e-8) = 0;
     N = sparse(N);
@@ -322,9 +342,8 @@ if findCM
 else
     ele = eleK(:);
 end
-rxnBal = metEle' * model.S;
 model.metFormulas = convertMatrixFormulas(ele,metEle,10);
-if nameCM > 0 && findCM ~= 0
+if nameCM > 0 && CMfound
     %manually name conserved moieties
     ele0 = ele;
     nDefault = 0;
@@ -418,6 +437,7 @@ if nameCM > 0 && findCM ~= 0
         ele{nE+j} = nameJ;
     end
 end
+rxnBal = metEle' * model.S;
 model.metFormulas = convertMatrixFormulas(ele,metEle,10);
 metCompute = [model.mets(metU) model.metFormulas(metU)];
 end
