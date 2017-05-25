@@ -1,2 +1,2 @@
 from .ResultStructure import PreprocessData, MinInconParsiInfo, ConservedMoietyInfo, ResultStructure
-from .GenericMetabolite import GenericMetabolite
+from .GenericFormula import GenericFormula

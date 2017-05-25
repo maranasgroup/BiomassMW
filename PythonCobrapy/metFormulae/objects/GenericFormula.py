@@ -1,5 +1,5 @@
 import re
-from cobra.core.Metabolite import Metabolite
+from cobra.core import Metabolite
 from ..functions import formulaDict2Str
 
 element_re = re.compile("([A-Z][a-z_]*)(\-?[0-9.]+[0-9.]?|(?=[A-Z])?)")

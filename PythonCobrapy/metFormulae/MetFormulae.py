@@ -7,10 +7,8 @@ try:
 	import cdd
 	cddImported = True
 except ImportError:
-	print 'pycddlib must be installed for extreme ray calculations.'
+	print 'pycddlib is not installed. Unable to use it for extreme ray calculations. Calculate the null space biasis only'
 	cddImported = False
-
-import timeit
 
 element_re = re.compile("([A-Z][a-z_]*)(\-?[0-9.]+[0-9.]?|(?=[A-Z])?)")
 
@@ -27,10 +25,12 @@ class MetFormulae(DataObject):
 		self.infinity = float('inf')
 		#default minimum value for charge variables
 		self.negative_infinity = - 10000 # -float('inf') seems to cause error for some solvers
+		self.__solver = cobra_model.solver
 
 	def computeMetForm(self, metKnown=None, rxns=None, metFill=['HCharge'], findCM='null', deadend=True, nameCM=0, **kwargs):
-		#Pre-porocessing
-		self.preprocessing(metKnown, rxns, metFill, **kwargs)
+		if not hasattr(self, 'pre'):
+			#Pre-porocessing
+			self.preprocessing(metKnown, rxns, metFill, **kwargs)
 		#Solve 'Minimum Inconsistency under Parsimony' to find a set of minimal formulae
 		mipInfo = self.minInconParsi(**kwargs)
 		#Find conserved moieties by calculating extreme rays
@@ -44,6 +44,15 @@ class MetFormulae(DataObject):
 		metFormResults = self.getResultsFromMIPandCM(mipInfo, cmInfo)
 		self.metFormResults = metFormResults
 		return metFormResults
+
+	def computeMetRange(self, metInterest, metKnown=None, rxns=None, **kwargs):
+		if not hasattr(self, 'pre'):
+			#Pre-porocessing
+			self.preprocessing(metKnown, rxns, metFill=None, **kwargs)
+		#Solve 'Minimum Inconsistency under Parsimony' to find a set of minimal formulae
+		mipInfo = self.minInconParsi_mwRange(metInterest, **kwargs)
+		self.metRangeResults = mipInfo
+		return mipInfo
 
 	def preprocessing(self, metKnown=None, rxns=None, metFill = ['HCharge'], **kwargs):
 		model = self.model
@@ -133,6 +142,8 @@ class MetFormulae(DataObject):
 		#Optimize for each connected componenet in eleConnect
 		for eCC in eleConnect:
 			metModelJ = Model(', '.join(eCC))
+			metModelJ.solver = self.__solver
+			print 'eCC: %s\tsolver: %s' %(eCC, metModelJ.solver.__class__)
 			infeasJ, boundJ, objJ = {}, {}, {}
 			constraint = {e: {j: Metabolite(j.id + ',' + e) for j in rxnK} for e in eCC}
 			m = {e: {i: Reaction('m_' + i.id + ',' + e) for i in metU} for e in eCC}
@@ -141,6 +152,7 @@ class MetFormulae(DataObject):
 			#add adjustment variable if filling mets associated with the current connected elements
 			Ap = {i: {j: Reaction('Ap_' + metF[i].formula + ',' + j.id) for j in rxnK} for i in metFillConnect[eCC]}
 			An = {i: {j: Reaction('An_' + metF[i].formula + ',' + j.id) for j in rxnK} for i in metFillConnect[eCC]}
+			
 			for e in eCC:
 				for j in rxnK:
 					#RHS for each constraint: -sum(S_ij * m^known_ie)
@@ -150,7 +162,6 @@ class MetFormulae(DataObject):
 					xp[e][j].add_metabolites({constraint[e][j]: 1})
 					xn[e][j].add_metabolites({constraint[e][j]: -1})
 					xp[e][j].lower_bound, xn[e][j].lower_bound, xp[e][j].upper_bound, xn[e][j].upper_bound = 0, 0, inf, inf
-					xp[e][j].objective_coefficient, xn[e][j].objective_coefficient = 1, 1
 					#m * A_pos - m * A_neg for each constraint
 					for i in metFillConnect[eCC]:
 						if e in metF[i].elements:
@@ -159,13 +170,13 @@ class MetFormulae(DataObject):
 				for i in metU:
 					# S_ij x m_ie for each i
 					m[e][i].add_metabolites({constraint[e][j]: j._metabolites[i] for j in list(i._reaction) if j in rxnK})
-					m[e][i].upper_bound, m[e][i].objective_coefficient = inf, 0
+					m[e][i].upper_bound = inf
 					m[e][i].lower_bound = neg_inf if e == 'Charge' else 0
 			for i in metFillConnect[eCC]:
 				for j in rxnK:
 					Ap[i][j].lower_bound, An[i][j].lower_bound, Ap[i][j].upper_bound, An[i][j].upper_bound = 0, 0, inf, inf
-					Ap[i][j].objective_coefficient, An[i][j].objective_coefficient = 0, 0
 			
+			print 'Add reactions into the model'
 			#add reactions into the model
 			metModelJ.add_reactions([m[e][i] for e in eCC for i in metU])
 			metModelJ.add_reactions([xp[e][j] for e in eCC for j in rxnK])
@@ -173,7 +184,18 @@ class MetFormulae(DataObject):
 			if bool(metFillConnect[eCC]):
 				metModelJ.add_reactions([Ap[i][j] for i in metFillConnect[eCC] for j in rxnK])
 				metModelJ.add_reactions([An[i][j] for i in metFillConnect[eCC] for j in rxnK])
+
+			for e in eCC:
+				for j in rxnK:
+					xp[e][j].objective_coefficient, xn[e][j].objective_coefficient = 1, 1
+				for i in metU:
+					m[e][i].objective_coefficient = 0
+			for i in metFillConnect[eCC]:
+				for j in rxnK:
+					Ap[i][j].objective_coefficient, An[i][j].objective_coefficient = 0, 0
+
 			#Solve for minimum inconsistency
+			print 'solve'
 			sol = metModelJ.optimize(**kwargs)
 			solStatJ = 'minIncon'
 			infeasJ[solStatJ] = solution_infeasibility(metModelJ, sol)
@@ -480,4 +502,42 @@ class MetFormulae(DataObject):
 		self.metFormResults = metFormResults
 		return metFormResults
 
+	def minInconParsi_mwRagne(self, **kwargs):
+		inf, neg_inf = self.infinity, self.negative_infinity
+		pre = self.pre
+		metK, metU, metF, rxnK, ele, feasTol, digitRounded \
+		= pre.metKnown, pre.metUnknown, pre.rxnKnown, \
+		pre.ele, pre.eleConnect, pre.metFillConnect, pre.feasTol, pre.digitRounded
+		model = self.model
+		kwargs['objective_sense'] = 'minimize'
+		infeas, bound, solution, metModel, solStat, obj = ({} for i in range(6))
+		for k in ['minIncon', 'minFill', 'minForm']: #pre-assignment
+			solution[k] = {'m': {}, 'xp': {}, 'xn': {}}
+
+		for e in ele:
+			metModelJ = Model('min/max ' + e)
+			infeasJ, boundJ, objJ = {}, {}, {}
+			constraint = {j: Metabolite(j.id + ',' + e) for j in rxnK}
+			m = {i: Reaction('m_' + i.id + ',' + e) for i in metU}
+			xp = {j: Reaction('xp_' + j.id + ',' + e) for j in rxnK}
+			xn = {j: Reaction('xn_' + j.id + ',' + e) for j in rxnK}
+			for j in rxnK:
+				#RHS for each constraint: -sum(S_ij * m^known_ie)
+				constraint[j]._bound = -sum([S_ij * metK[i].elements[e] for i, S_ij in j._metabolites.iteritems() if i in metK and e in metK[i].elements])
+				constraint[j]._constraint_sense = 'E'
+				#x_pos - x_neg for each constraint
+				xp[j].add_metabolites({constraint[j]: 1})
+				xn[j].add_metabolites({constraint[j]: -1})
+				xp[j].lower_bound, xn[j].lower_bound, xp[j].upper_bound, xn[j].upper_bound = 0, 0, inf, inf
+				xp[j].objective_coefficient, xn[j].objective_coefficient = 1, 1
+
+
+	@property
+	def solver(self):
+		return self.__solver
+
+	@solver.setter
+	def solver(self, choice):
+		self.model.solver = choice
+		self.__solver = self.model.solver
 	
