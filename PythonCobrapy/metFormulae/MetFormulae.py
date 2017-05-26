@@ -200,7 +200,8 @@ class MetFormulae(DataObject):
                         # Note that the default value of objective_coefficient is 0, so you do not need to specify m and Ap, An
                         objective_dict = dict()
                         for j in rxnK:
-                                objective_dict[j] = 1
+                                objective_dict[metModelJ.reactions.get_by_id('xp_' + j.id + ',' + e)] = 1
+                                objective_dict[metModelJ.reactions.get_by_id('xn_' + j.id + ',' + e)] = 1
                         set_objective(metModelJ, objective_dict)
 			# for e in eCC:
 			# 	for j in rxnK:
