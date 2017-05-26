@@ -1,8 +1,11 @@
 import re
+import pdb
 from cobra.core import Model, Reaction, Metabolite
+from cobra.util.solver import set_objective
 from .objects.GenericFormula import GenericFormula as Formula
 from .functions import solution_infeasibility, active_met_rxn, formulaDict2Str, num2alpha, extreme_rays_from_null_basis
 from .objects.ResultStructure import DataObject, PreprocessData, MinInconParsiInfo, ConservedMoietyInfo, ResultStructure
+
 try:
 	import cdd
 	cddImported = True
@@ -152,6 +155,12 @@ class MetFormulae(DataObject):
 			#add adjustment variable if filling mets associated with the current connected elements
 			Ap = {i: {j: Reaction('Ap_' + metF[i].formula + ',' + j.id) for j in rxnK} for i in metFillConnect[eCC]}
 			An = {i: {j: Reaction('An_' + metF[i].formula + ',' + j.id) for j in rxnK} for i in metFillConnect[eCC]}
+			# m = {e: {i: Reaction('m_' + i.id + ',' + e) for i in metU} for e in eCC}
+			# xp = {e: {j: Reaction('xp_' + j.id + ',' + e, objective_coefficient=1) for j in rxnK} for e in eCC}
+			# xn = {e: {j: Reaction('xn_' + j.id + ',' + e, objective_coefficient=0) for j in rxnK} for e in eCC}
+			# #add adjustment variable if filling mets associated with the current connected elements
+			# Ap = {i: {j: Reaction('Ap_' + metF[i].formula + ',' + j.id) for j in rxnK} for i in metFillConnect[eCC]}
+			# An = {i: {j: Reaction('An_' + metF[i].formula + ',' + j.id) for j in rxnK} for i in metFillConnect[eCC]}
 			
 			for e in eCC:
 				for j in rxnK:
@@ -184,15 +193,32 @@ class MetFormulae(DataObject):
 			if bool(metFillConnect[eCC]):
 				metModelJ.add_reactions([Ap[i][j] for i in metFillConnect[eCC] for j in rxnK])
 				metModelJ.add_reactions([An[i][j] for i in metFillConnect[eCC] for j in rxnK])
-
-			for e in eCC:
-				for j in rxnK:
-					xp[e][j].objective_coefficient, xn[e][j].objective_coefficient = 1, 1
-				for i in metU:
-					m[e][i].objective_coefficient = 0
-			for i in metFillConnect[eCC]:
-				for j in rxnK:
-					Ap[i][j].objective_coefficient, An[i][j].objective_coefficient = 0, 0
+                        # pdb.set_trace()
+                        # the objective can be set as a dictionary of rxns {rxn_id: 1,...}
+                        # check this repo https://github.com/opencobra/cobrapy/blob/devel/cobra/util/solver.py
+                        # so the objective of the following section would be the summation of xp and summation of xn
+                        # Note that the default value of objective_coefficient is 0, so you do not need to specify m and Ap, An
+                        objective_dict = dict()
+                        for j in rxnK:
+                                objective_dict[j] = 1
+                        set_objective(metModelJ, objective_dict)
+			# for e in eCC:
+			# 	for j in rxnK:
+                        #                 print j
+                        #                 new_xp = metModelJ.reactions.get_by_id('xp_' + j.id + ',' + e)
+                        #                 new_xn = metModelJ.reactions.get_by_id('xn_' + j.id + ',' + e)
+                        #                 new_xp.objective_coefficient(1)
+                        #                 new_xn.objective_coefficient(1)
+                        #                 # pdb.set_trace()
+			# 		# xp[e][j].objective_coefficient = 1
+                        #                 # xn[e][j].objective_coefficient = 1
+                        #         pdb.set_trace()        
+                        ## the default is 0, not nded to specify
+			# 	for i in metU:
+			# 		m[e][i].objective_coefficient = 0
+			# # for i in metFillConnect[eCC]:
+			# # 	for j in rxnK:
+			# # 		Ap[i][j].objective_coefficient, An[i][j].objective_coefficient = 0, 0
 
 			#Solve for minimum inconsistency
 			print 'solve'
