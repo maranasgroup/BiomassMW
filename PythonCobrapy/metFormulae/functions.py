@@ -1,9 +1,9 @@
 import numpy
 
 def solution_infeasibility(model, sol):
-	if sol.x_dict is None:
+	if sol.fluxes is None:
 		return float('inf')
-	Svb = {i: sum([j._metabolites[i] * sol.x_dict[j.id] for j in list(i._reaction)]) - i._bound for i in model.metabolites}
+	Svb = {i: sum([j._metabolites[i] * sol.fluxes[j.id] for j in list(i._reaction)]) - i._bound for i in model.metabolites}
 	infeas = max([abs(Svb[i]) for i in model.metabolites if i._constraint_sense == 'E'] + [0])
 	infeas = max([Svb[i] for i in model.metabolites if i._constraint_sense == 'L'] + [infeas])
 	infeas = max([- Svb[i] for i in model.metabolites if i._constraint_sense == 'G'] + [infeas])

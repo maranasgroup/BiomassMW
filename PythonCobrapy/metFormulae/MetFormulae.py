@@ -5,7 +5,8 @@ from cobra.util.solver import set_objective
 from .objects.GenericFormula import GenericFormula as Formula
 from .functions import solution_infeasibility, active_met_rxn, formulaDict2Str, num2alpha, extreme_rays_from_null_basis
 from .objects.ResultStructure import DataObject, PreprocessData, MinInconParsiInfo, ConservedMoietyInfo, ResultStructure
-
+from sympy import Sum
+import datetime
 try:
 	import cdd
 	cddImported = True
@@ -167,6 +168,8 @@ class MetFormulae(DataObject):
 					#RHS for each constraint: -sum(S_ij * m^known_ie)
 					constraint[e][j]._bound = -sum([S_ij * metK[i].elements[e] for i, S_ij in j._metabolites.iteritems() if i in metK and e in metK[i].elements])
 					constraint[e][j]._constraint_sense = 'E'
+					# constraint[e][j].constraint.lb = constraint[e][j]._bound
+					# constraint[e][j].constraint.ub = constraint[e][j]._bound
 					#x_pos - x_neg for each constraint
 					xp[e][j].add_metabolites({constraint[e][j]: 1})
 					xn[e][j].add_metabolites({constraint[e][j]: -1})
@@ -193,16 +196,20 @@ class MetFormulae(DataObject):
 			if bool(metFillConnect[eCC]):
 				metModelJ.add_reactions([Ap[i][j] for i in metFillConnect[eCC] for j in rxnK])
 				metModelJ.add_reactions([An[i][j] for i in metFillConnect[eCC] for j in rxnK])
-                        # pdb.set_trace()
-                        # the objective can be set as a dictionary of rxns {rxn_id: 1,...}
-                        # check this repo https://github.com/opencobra/cobrapy/blob/devel/cobra/util/solver.py
-                        # so the objective of the following section would be the summation of xp and summation of xn
-                        # Note that the default value of objective_coefficient is 0, so you do not need to specify m and Ap, An
-                        objective_dict = dict()
-                        for j in rxnK:
-                                objective_dict[metModelJ.reactions.get_by_id('xp_' + j.id + ',' + e)] = 1
-                                objective_dict[metModelJ.reactions.get_by_id('xn_' + j.id + ',' + e)] = 1
-                        set_objective(metModelJ, objective_dict)
+            # pdb.set_trace()
+            # the objective can be set as a dictionary of rxns {rxn_id: 1,...}
+            # check this repo https://github.com/opencobra/cobrapy/blob/devel/cobra/util/solver.py
+            # so the objective of the following section would be the summation of xp and summation of xn
+            # Note that the default value of objective_coefficient is 0, so you do not need to specify m and Ap, An
+			# objective_dict = dict()
+			objective_dict = {xp[e][j]: 1 for e in eCC for j in rxnK}
+			objective_dict.update({xn[e][j]: 1 for e in eCC for j in rxnK})
+			# for e in eCC:
+			# 	objective_dict.update({xp[e][j]: )
+			# for j in rxnK:
+			# 	objective_dict[metModelJ.reactions.get_by_id('xp_' + j.id + ',' + e)] = 1
+			# 	objective_dict[metModelJ.reactions.get_by_id('xn_' + j.id + ',' + e)] = 1
+			set_objective(metModelJ, objective_dict)
 			# for e in eCC:
 			# 	for j in rxnK:
                         #                 print j
@@ -223,26 +230,33 @@ class MetFormulae(DataObject):
 
 			#Solve for minimum inconsistency
 			print 'solve'
+			# raise ValueError
+			for e in eCC:
+				for j in rxnK:
+					metModelJ.constraints[constraint[e][j].id].ub = inf #to avoid error
+					metModelJ.constraints[constraint[e][j].id].lb, metModelJ.constraints[constraint[e][j].id].ub = constraint[e][j]._bound, constraint[e][j]._bound
+
 			sol = metModelJ.optimize(**kwargs)
 			solStatJ = 'minIncon'
 			infeasJ[solStatJ] = solution_infeasibility(metModelJ, sol)
-			if sol.x_dict is None:
+			if sol.fluxes is None:
 				boundJ[solStatJ] = {e: float('nan') for e in eCC}
 			else:	
-				boundJ[solStatJ] = {e: sum([sol.x_dict[j.id] for j in xp[e].values() + xn[e].values()]) for e in eCC}
+				boundJ[solStatJ] = {e: sum([sol.fluxes[j.id] for j in xp[e].values() + xn[e].values()]) for e in eCC}
 			if not infeasJ[solStatJ] <= feasTol:
 				#infeasible (should not happen)
 				infeasJ['minFill'], infeasJ['minForm'] = inf, inf
 				solConstrainJ = 'infeasible'
 				solStatJ = 'infeasible'
 				objJ['minIncon'], objJ['minFill'], objJ['minForm'] = (float('nan') for i in range(3))
+				raise ValueError
 			else:
 				#Feasible. Store the solution
-				solution[solStatJ]['m'].update({e: {i: sol.x_dict[m[e][i].id] for i in metU} for e in eCC})
-				solution[solStatJ]['xp'].update({e: {j: sol.x_dict[xp[e][j].id] for j in rxnK} for e in eCC})
-				solution[solStatJ]['xn'].update({e: {j: sol.x_dict[xn[e][j].id] for j in rxnK} for e in eCC})
-				solution[solStatJ]['Ap'].update({i: {j: sol.x_dict[Ap[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
-				solution[solStatJ]['An'].update({i: {j: sol.x_dict[An[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
+				solution[solStatJ]['m'].update({e: {i: sol.fluxes[m[e][i].id] for i in metU} for e in eCC})
+				solution[solStatJ]['xp'].update({e: {j: sol.fluxes[xp[e][j].id] for j in rxnK} for e in eCC})
+				solution[solStatJ]['xn'].update({e: {j: sol.fluxes[xn[e][j].id] for j in rxnK} for e in eCC})
+				solution[solStatJ]['Ap'].update({i: {j: sol.fluxes[Ap[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
+				solution[solStatJ]['An'].update({i: {j: sol.fluxes[An[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
 				objJ[solStatJ] = sol.f
 
 				solConstrainJ = 'minIncon'
@@ -250,19 +264,36 @@ class MetFormulae(DataObject):
 				if bool(metFillConnect[eCC]):
 					#Add constraint to fix the total inconsistency for each element
 					constraint_minIncon = {e: Metabolite('minIncon_'+e) for e in eCC}
+					# raise ValueError
+					# print 'Start adding minIncon constraints'
+					# print datetime.datetime.now()
+					# constraint_minIncon = {e: metModelJ.problem.Constraint(sum([xp[e][j].flux_expression + xn[e][j].flux_expression for j in rxnK]), \
+					# 	lb=neg_inf, ub=round(boundJ[solStatJ][e], digitRounded)) for e in eCC}
+					# print 'Finished'
+					# print datetime.datetime.now()
+					# constraint_minIncon = {}
 					for e in eCC:
 						#rounding to avoid infeasibility due to numerical issues
 						constraint_minIncon[e]._bound = round(boundJ[solStatJ][e], digitRounded)
 						constraint_minIncon[e]._constraint_sense = 'L'
+						# first = True
 						for j in rxnK:
 							xp[e][j].add_metabolites({constraint_minIncon[e]: 1})
 							xn[e][j].add_metabolites({constraint_minIncon[e]: 1})
-							xp[e][j].objective_coefficient = 0
-							xn[e][j].objective_coefficient = 0
-					for i in metFillConnect[eCC]:
-						for j in rxnK:
-							Ap[i][j].objective_coefficient = 1
-							An[i][j].objective_coefficient = 1
+							# if first:
+							# 	expr = xp[e][j].flux_expression + xn[e][j].flux_expression
+							# 	first = False
+							# else:
+							# 	expr += xp[e][j].flux_expression + xn[e][j].flux_expression
+						# constraint_minIncon[e] = metModelJ.problem.Constraint(expr,lb=neg_inf, ub=round(boundJ[solStatJ][e], digitRounded))
+						# metModel.add_cons_vars(constraint_minIncon[e])
+						metModelJ.constraints[constraint_minIncon[e].id].lb = neg_inf #to avoid error
+						metModelJ.constraints[constraint_minIncon[e].id].ub = round(boundJ[solStatJ][e], digitRounded)
+
+					#reset the objective function
+					objective_dict = {Ap[i][j]: 1 for i in metFillConnect[eCC] for j in rxnK}
+					objective_dict.update({An[i][j]: 1 for i in metFillConnect[eCC] for j in rxnK})
+					set_objective(metModelJ, objective_dict)
 					solStatJ = 'minFill'
 					eps0 = 1e-6
 					while True:
@@ -272,18 +303,20 @@ class MetFormulae(DataObject):
 							break
 						eps0 *= 10
 						for e in eCC:
+							metModelJ.constraints[constraint_minIncon[e].id].ub
 							#rounding to avoid infeasibility due to numerical issues
-							constraint_minIncon[e]._bound = round(boundJ['minIncon'][e] * (1 + eps0), digitRounded)
+							# constraint_minIncon[e]._bound = round(boundJ['minIncon'][e] * (1 + eps0), digitRounded)
+							metModelJ.constraints[constraint_minIncon[e].id].ub = round(boundJ['minIncon'][e] * (1 + eps0), digitRounded)
 					boundJ[solStatJ] = eps0
 					if infeasJ[solStatJ] <= feasTol:
 						#Feasible. Use this as the solution for constraining the minimal formula problem
 						solConstrainJ = 'minFill'
 						#Store the solution
-						solution[solStatJ]['m'].update({e: {i: sol.x_dict[m[e][i].id] for i in metU} for e in eCC})
-						solution[solStatJ]['xp'].update({e: {j: sol.x_dict[xp[e][j].id] for j in rxnK} for e in eCC})
-						solution[solStatJ]['xn'].update({e: {j: sol.x_dict[xn[e][j].id] for j in rxnK} for e in eCC})
-						solution[solStatJ]['Ap'].update({i: {j: sol.x_dict[Ap[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
-						solution[solStatJ]['An'].update({i: {j: sol.x_dict[An[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
+						solution[solStatJ]['m'].update({e: {i: sol.fluxes[m[e][i].id] for i in metU} for e in eCC})
+						solution[solStatJ]['xp'].update({e: {j: sol.fluxes[xp[e][j].id] for j in rxnK} for e in eCC})
+						solution[solStatJ]['xn'].update({e: {j: sol.fluxes[xn[e][j].id] for j in rxnK} for e in eCC})
+						solution[solStatJ]['Ap'].update({i: {j: sol.fluxes[Ap[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
+						solution[solStatJ]['An'].update({i: {j: sol.fluxes[An[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
 						objJ[solStatJ] = sol.f
 					else:
 						#infeasible, should not happen
@@ -292,9 +325,9 @@ class MetFormulae(DataObject):
 					eps0 = 1e-10
 					for j in rxnK:
 						for i in metFillConnect[eCC]:
-							#reset the objective function
-							Ap[i][j].objective_coefficient = 0
-							An[i][j].objective_coefficient = 0
+							# #reset the objective function
+							# Ap[i][j].objective_coefficient = 0
+							# An[i][j].objective_coefficient = 0
 							#Fix the adjustment
 							Ap[i][j].lower_bound = round(solution[solConstrainJ]['Ap'][i][j] * (1 - eps0), digitRounded)
 							Ap[i][j].upper_bound = round(solution[solConstrainJ]['Ap'][i][j] * (1 + eps0), digitRounded)
@@ -321,11 +354,12 @@ class MetFormulae(DataObject):
 						xn[e][j].lower_bound = round(solution[solConstrainJ]['xn'][e][j] * (1 - eps0), digitRounded)
 						xn[e][j].upper_bound = round(solution[solConstrainJ]['xn'][e][j] * (1 + eps0), digitRounded)
 					
-					if e != 'Charge':
-						for i in metU:
-							#objective coefficients for minimal formulae
-							m[e][i].objective_coefficient = 1
-					else:	
+					# if e != 'Charge':
+						# for i in metU:
+						# 	#objective coefficients for minimal formulae
+						# 	m[e][i].objective_coefficient = 1
+					# else:
+					if e == 'Charge':	
 						#add variables for the positive and negative part of charges
 						chargePos = {i: Reaction('chargePos_' + i.id) for i in metU}
 						chargeNeg = {i: Reaction('chargeNeg_' + i.id) for i in metU}
@@ -335,11 +369,21 @@ class MetFormulae(DataObject):
 							m[e][i].add_metabolites({constraint_chargeDecomp[i]: 1})
 							chargePos[i].add_metabolites({constraint_chargeDecomp[i]: -1})
 							chargeNeg[i].add_metabolites({constraint_chargeDecomp[i]: 1})
-							chargePos[i].objective_coefficient, chargePos[i].lower_bound, chargePos[i].upper_bound = 1, 0, inf
-							chargeNeg[i].objective_coefficient, chargeNeg[i].lower_bound, chargeNeg[i].upper_bound = 1, 0, inf
+							# chargePos[i].objective_coefficient, chargePos[i].lower_bound, chargePos[i].upper_bound = 1, 0, inf
+							# chargeNeg[i].objective_coefficient, chargeNeg[i].lower_bound, chargeNeg[i].upper_bound = 1, 0, inf
+							chargePos[i].lower_bound, chargePos[i].upper_bound = 0, inf
+							chargeNeg[i].lower_bound, chargeNeg[i].upper_bound = 0, inf
 							constraint_chargeDecomp[i]._bound, constraint_chargeDecomp[i]._constraint_sense = 0, 'E'
 						metModelJ.add_metabolites(constraint_chargeDecomp.values())
 						metModelJ.add_reactions(chargePos.values() + chargeNeg.values())
+
+				#reset the objective function
+				objective_dict = {m[e][i]: 1 for e in eCC if e != 'Charge' for i in metU}
+				if 'Charge' in eCC:
+					objective_dict.update({chargePos[i]: 1 for i in metU})
+					objective_dict.update({chargeNeg[i]: 1 for i in metU})
+				set_objective(metModelJ, objective_dict)
+
 				#Solve for minimum formulae
 				solStatPrev, solStatJ =solStatJ, 'minForm'
 				while True:
@@ -363,11 +407,11 @@ class MetFormulae(DataObject):
 				boundJ[solStatJ] = eps0
 				if infeasJ[solStatJ] <= feasTol:
 					#Feasible. Store the solution
-					solution[solStatJ]['m'].update({e: {i: sol.x_dict[m[e][i].id] for i in metU} for e in eCC})
-					solution[solStatJ]['xp'].update({e: {j: sol.x_dict[xp[e][j].id] for j in rxnK} for e in eCC})
-					solution[solStatJ]['xn'].update({e: {j: sol.x_dict[xn[e][j].id] for j in rxnK} for e in eCC})
-					solution[solStatJ]['Ap'].update({i: {j: sol.x_dict[Ap[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
-					solution[solStatJ]['An'].update({i: {j: sol.x_dict[An[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
+					solution[solStatJ]['m'].update({e: {i: sol.fluxes[m[e][i].id] for i in metU} for e in eCC})
+					solution[solStatJ]['xp'].update({e: {j: sol.fluxes[xp[e][j].id] for j in rxnK} for e in eCC})
+					solution[solStatJ]['xn'].update({e: {j: sol.fluxes[xn[e][j].id] for j in rxnK} for e in eCC})
+					solution[solStatJ]['Ap'].update({i: {j: sol.fluxes[Ap[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
+					solution[solStatJ]['An'].update({i: {j: sol.fluxes[An[i][j].id] for j in rxnK} for i in metFillConnect[eCC]})
 					objJ[solStatJ] = sol.f
 				else:
 					#infeasible, should not happen
