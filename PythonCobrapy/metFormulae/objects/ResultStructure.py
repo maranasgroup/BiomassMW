@@ -1,8 +1,9 @@
 class DataObject(object):
 	def __repr__(self):
 		print 'Attribute\tClass\tValue/Length'
-		for k, val in self.__dict__.iteritems():
+		for k in dir(self):
 			if k[0] != '_':
+				val = eval("self." + k)
 				s = ''
 				if isinstance(val, (int, long, float, complex)):
 					s = str(val)
