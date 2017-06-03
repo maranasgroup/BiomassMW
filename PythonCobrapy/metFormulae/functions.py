@@ -3,10 +3,15 @@ import numpy
 def solution_infeasibility(model, sol):
 	if sol.fluxes is None:
 		return float('inf')
-	Svb = {i: sum([j._metabolites[i] * sol.fluxes[j.id] for j in list(i._reaction)]) - i._bound for i in model.metabolites}
-	infeas = max([abs(Svb[i]) for i in model.metabolites if i._constraint_sense == 'E'] + [0])
-	infeas = max([Svb[i] for i in model.metabolites if i._constraint_sense == 'L'] + [infeas])
-	infeas = max([- Svb[i] for i in model.metabolites if i._constraint_sense == 'G'] + [infeas])
+	if False:
+		#obsolete
+		Svb = {i: sum([j._metabolites[i] * sol.fluxes[j.id] for j in list(i._reaction)]) - i._bound for i in model.metabolites}
+		infeas = max([abs(Svb[i]) for i in model.metabolites if i._constraint_sense == 'E'] + [0])
+		infeas = max([Svb[i] for i in model.metabolites if i._constraint_sense == 'L'] + [infeas])
+		infeas = max([- Svb[i] for i in model.metabolites if i._constraint_sense == 'G'] + [infeas])
+	else:
+		infeas = max([sum([j._metabolites[i] * sol.fluxes[j.id] for j in list(i._reaction)]) - model.constraints[i.id].ub for i in model.metabolites])
+		infeas = max([infeas] + [model.constraints[i.id].lb - sum([j._metabolites[i] * sol.fluxes[j.id] for j in list(i._reaction)]) for i in model.metabolites])
 	return infeas
 
 def active_met_rxn(model):

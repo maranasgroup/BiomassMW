@@ -75,7 +75,7 @@ class MetFormulae(DataObject):
 				metK = {i: Formula(i) for i in metKnown if i in model.metabolites}
 			elif all([isinstance(i, str) for i in metKnown]):
 				#list of met IDs
-				metK = {i: Formula(model.metabolites[model.metabolites.index(i)]) for i in metKnown if i in model.metabolites}
+				metK = {model.metabolites.get_by_id(i): Formula(model.metabolites[model.metabolites.index(i)]) for i in metKnown if i in model.metabolites}
 			else:
 				raise	ValueError, 'metKnown must be a list of met IDs or met objects.'
 			if len(metK) < len(metKnown):
@@ -533,51 +533,90 @@ class MetFormulae(DataObject):
 		
 		print 'Find the range for the molecular weight of %s ... %s' %(metI.id, datetime.datetime.now())
 
-		infeas, bound, solution, metModel, solStat, obj = ({} for i in range(6))
+		infeas, bound, solution, solStat, obj, rhs = ({} for i in range(6))
 		for k in ['minIncon', 'minMw', 'maxMw']: #pre-assignment
 			solution[k] = {'m': {}, 'xp': {}, 'xn': {}}
 		ct = 0
+		#The optimization problem for each element is the same except the RHS
+		metModel = Model('min/max Mw of ' + metI.id)
+		metModel.solver = self.__solver
+		constraint = {j: Metabolite(j.id) for j in rxnK}
+		m = {i: Reaction('m_' + i.id) for i in metU}
+		xp = {j: Reaction('xp_' + j.id) for j in rxnK}
+		xn = {j: Reaction('xn_' + j.id) for j in rxnK}
+		for j in rxnK:
+			xp[j].add_metabolites({constraint[j]: 1})
+			xn[j].add_metabolites({constraint[j]: -1})
+			xp[j].lower_bound, xn[j].lower_bound, xp[j].upper_bound, xn[j].upper_bound = 0, 0, inf, inf
+			constraint[j]._constraint_sense = 'E'
+
+		for i in metU:
+			# S_ij x m_ie for each i
+			m[i].add_metabolites({constraint[j]: j._metabolites[i] for j in list(i._reaction) if j in rxnK})
+			m[i].upper_bound = inf
+
+		#Add constraint to fix the total inconsistency for each element
+		constraint_minIncon = Metabolite('minIncon')
+		constraint_minIncon._bound = inf
+		constraint_minIncon._constraint_sense = 'L'
+		for j in rxnK:
+			xp[j].add_metabolites({constraint_minIncon: 1})
+			xn[j].add_metabolites({constraint_minIncon: 1})
+
+		metModel.add_reactions([m[i] for i in metU])
+		metModel.add_reactions([xp[j] for j in rxnK])
+		metModel.add_reactions([xn[j] for j in rxnK])
+
+		metModel.constraints[constraint_minIncon.id].lb = neg_inf #to avoid error
+
+		objective_dict_minIncon = {xp[j]: 1 for j in rxnK}
+		objective_dict_minIncon.update({xn[j]: 1 for j in rxnK})
+
+
 		for e in ele:
 			ct += 1
 			print "Optimizing for %d / %d element ... %s" %(ct, len(ele), datetime.datetime.now())
-			metModelJ = Model('min/max ' + e)
-			metModelJ.solver = self.__solver
-			infeasJ, boundJ, objJ = {}, {}, {}
-			constraint = {j: Metabolite(j.id + ',' + e) for j in rxnK}
-			m = {i: Reaction('m_' + i.id + ',' + e) for i in metU}
-			xp = {j: Reaction('xp_' + j.id + ',' + e) for j in rxnK}
-			xn = {j: Reaction('xn_' + j.id + ',' + e) for j in rxnK}
-			for j in rxnK:
+			# metModelJ = Model('min/max ' + e)
+			# metModelJ.solver = self.__solver
+			infeasJ, boundJ, objJ, rhsJ = {}, {}, {}, {}
+			# constraint = {j: Metabolite(j.id + ',' + e) for j in rxnK}
+			# m = {i: Reaction('m_' + i.id + ',' + e) for i in metU}
+			# xp = {j: Reaction('xp_' + j.id + ',' + e) for j in rxnK}
+			# xn = {j: Reaction('xn_' + j.id + ',' + e) for j in rxnK}
+			# for j in rxnK:
 				#RHS for each constraint: -sum(S_ij * m^known_ie) (obsolete)
-				constraint[j]._bound = -sum([S_ij * metK[i].elements[e] for i, S_ij in j._metabolites.iteritems() if i in metK and e in metK[i].elements])
-				constraint[j]._constraint_sense = 'E'
+				# constraint[j]._bound = -sum([S_ij * metK[i].elements[e] for i, S_ij in j._metabolites.iteritems() if i in metK and e in metK[i].elements])
+				# constraint[j]._constraint_sense = 'E'
 				#x_pos - x_neg for each constraint
-				xp[j].add_metabolites({constraint[j]: 1})
-				xn[j].add_metabolites({constraint[j]: -1})
-				xp[j].lower_bound, xn[j].lower_bound, xp[j].upper_bound, xn[j].upper_bound = 0, 0, inf, inf
+				# xp[j].add_metabolites({constraint[j]: 1})
+				# xn[j].add_metabolites({constraint[j]: -1})
+				# xp[j].lower_bound, xn[j].lower_bound, xp[j].upper_bound, xn[j].upper_bound = 0, 0, inf, inf
 			for i in metU:
-				# S_ij x m_ie for each i
-				m[i].add_metabolites({constraint[j]: j._metabolites[i] for j in list(i._reaction) if j in rxnK})
-				m[i].upper_bound = inf
+				# # S_ij x m_ie for each i
+				# m[i].add_metabolites({constraint[j]: j._metabolites[i] for j in list(i._reaction) if j in rxnK})
+				# m[i].upper_bound = inf
 				m[i].lower_bound = neg_inf if e == 'Charge' else 0
 			#add reactions into the model
-			metModelJ.add_reactions([m[i] for i in metU])
-			metModelJ.add_reactions([xp[j] for j in rxnK])
-			metModelJ.add_reactions([xn[j] for j in rxnK])
+			# metModelJ.add_reactions([m[i] for i in metU])
+			# metModelJ.add_reactions([xp[j] for j in rxnK])
+			# metModelJ.add_reactions([xn[j] for j in rxnK])
 			#set the objective function
-			objective_dict = {xp[j]: 1 for j in rxnK}
-			objective_dict.update({xn[j]: 1 for j in rxnK})
-			set_objective(metModelJ, objective_dict)	
+			# objective_dict = {xp[j]: 1 for j in rxnK}
+			# objective_dict.update({xn[j]: 1 for j in rxnK})
+			metModel.constraints[constraint_minIncon.id].ub = inf
+			set_objective(metModel, objective_dict_minIncon)	
 			#set RHS: -sum(S_ij * m^known_ie)
 			for j in rxnK:
-				metModelJ.constraints[constraint[j].id].ub = inf #ub must be set to be > lb to avoid error
-				metModelJ.constraints[constraint[j].id].lb, metModelJ.constraints[constraint[j].id].ub = constraint[j]._bound, constraint[j]._bound		
+				metModel.constraints[constraint[j].id].ub = inf #ub must be set to be > lb to avoid error
+				rhsJ[j] = -sum([S_ij * metK[i].elements[e] for i, S_ij in j._metabolites.iteritems() if i in metK and e in metK[i].elements])
+				metModel.constraints[constraint[j].id].lb, metModel.constraints[constraint[j].id].ub = rhsJ[j], rhsJ[j]
+				constraint[j]._bound = rhsJ[j]
 
 			#Solve for minimum inconsistency
 			kwargs['objective_sense'] = 'minimize'
-			sol = metModelJ.optimize(**kwargs)
+			sol = metModel.optimize(**kwargs)
 			solStatJ = 'minIncon'
-			infeasJ[solStatJ] = solution_infeasibility(metModelJ, sol)
+			infeasJ[solStatJ] = solution_infeasibility(metModel, sol)
 			if sol.fluxes is None:
 				boundJ[solStatJ] = float('nan')
 			else:	
@@ -586,37 +625,41 @@ class MetFormulae(DataObject):
 				#infeasible (should not happen)
 				infeasJ['minMw'], infeasJ['maxMw'] = inf, inf
 				solStatJ = 'infeasible'
-				objJ['minIncon'], objJ['minMw'], objJ['minMw'] = (float('nan') for i in range(3))
+				objJ['minIncon'], objJ['minMw'], objJ['maxMw'] = (float('nan') for i in range(3))
+				for s in ['minIncon','minMw','maxMw']:
+					solution[s]['m'][e] = {i: float('nan') for i in metU}
+					solution[s]['xp'][e] = {j: float('nan') for j in rxnK}
+					solution[s]['xn'][e] = {j: float('nan') for j in rxnK}
 			else:
 				#Feasible. Store the solution
 				solution[solStatJ]['m'][e] = {i: sol.fluxes[m[i].id] for i in metU}
 				solution[solStatJ]['xp'][e] = {j: sol.fluxes[xp[j].id] for j in rxnK}
 				solution[solStatJ]['xn'][e] = {j: sol.fluxes[xn[j].id] for j in rxnK}
 				objJ[solStatJ] = sol.f
-				#Add constraint to fix the total inconsistency for each element
-				constraint_minIncon = Metabolite('minIncon_'+e)
-				constraint_minIncon._bound = round(boundJ['minIncon'], digitRounded)
-				constraint_minIncon._constraint_sense = 'L'
-				for j in rxnK:
-					xp[j].add_metabolites({constraint_minIncon: 1})
-					xn[j].add_metabolites({constraint_minIncon: 1})
+				# #Add constraint to fix the total inconsistency for each element
+				# constraint_minIncon = Metabolite('minIncon_'+e)
+				# constraint_minIncon._bound = round(boundJ['minIncon'], digitRounded)
+				# constraint_minIncon._constraint_sense = 'L'
+				# for j in rxnK:
+				# 	xp[j].add_metabolites({constraint_minIncon: 1})
+				# 	xn[j].add_metabolites({constraint_minIncon: 1})
 
-				metModelJ.constraints[constraint_minIncon.id].lb = neg_inf #to avoid error
-				metModelJ.constraints[constraint_minIncon.id].ub = round(boundJ['minIncon'], digitRounded)
+				# metModel.constraints[constraint_minIncon.id].lb = neg_inf #to avoid error
+				metModel.constraints[constraint_minIncon.id].ub = round(boundJ['minIncon'], digitRounded)
 				#reset the objective function to minimize molecular weight
 				objective_dict = {m[metI]: Formula(formula=e).mw}
-				set_objective(metModelJ, objective_dict)
+				set_objective(metModel, objective_dict)
 				solStatJ = 'minMw'
 				kwargs['objective_sense'] = 'minimize'
 				eps0 = 1e-6
 				while True:
-					sol = metModelJ.optimize(**kwargs)
-					infeasJ[solStatJ] = solution_infeasibility(metModelJ, sol)
+					sol = metModel.optimize(**kwargs)
+					infeasJ[solStatJ] = solution_infeasibility(metModel, sol)
 					if infeasJ[solStatJ] <= feasTol or eps0 > 1e-4 + 1e-8:
 						break
 					eps0 *= 10
 					#rounding to avoid infeasibility due to numerical issues
-					metModelJ.constraints[constraint_minIncon.id].ub = round(boundJ['minIncon'] * (1 + eps0), digitRounded)
+					metModel.constraints[constraint_minIncon.id].ub = round(boundJ['minIncon'] * (1 + eps0), digitRounded)
 						
 				boundJ[solStatJ] = eps0
 				if infeasJ[solStatJ] <= feasTol:
@@ -628,19 +671,24 @@ class MetFormulae(DataObject):
 				else:
 					#infeasible, should not happen
 					objJ[solStatJ] = float('nan')
+					solution['minMw']['m'][e] = {i: float('nan') for i in metU}
+					solution['minMw']['xp'][e] = {j: float('nan') for j in rxnK}
+					solution['minMw']['xn'][e] = {j: float('nan') for j in rxnK}
 
 				#maximize molecular weight
 				solStatJ = 'maxMw'
+				#reset the bound for total inconsistency
+				metModel.constraints[constraint_minIncon.id].ub = round(boundJ['minIncon'], digitRounded)
 				kwargs['objective_sense'] = 'maximize'
 				eps0 = 1e-6
 				while True:
-					sol = metModelJ.optimize(**kwargs)
-					infeasJ[solStatJ] = solution_infeasibility(metModelJ, sol)
+					sol = metModel.optimize(**kwargs)
+					infeasJ[solStatJ] = solution_infeasibility(metModel, sol)
 					if infeasJ[solStatJ] <= feasTol or eps0 > 1e-4 + 1e-8:
 						break
 					eps0 *= 10
 					#rounding to avoid infeasibility due to numerical issues
-					metModelJ.constraints[constraint_minIncon.id].ub = round(boundJ['minIncon'] * (1 + eps0), digitRounded)
+					metModel.constraints[constraint_minIncon.id].ub = round(boundJ['minIncon'] * (1 + eps0), digitRounded)
 						
 				boundJ[solStatJ] = eps0
 				if infeasJ[solStatJ] <= feasTol:
@@ -652,13 +700,17 @@ class MetFormulae(DataObject):
 				else:
 					#infeasible, should not happen
 					objJ[solStatJ] = float('nan')
+					solution['maxMw']['m'][e] = {i: float('nan') for i in metU}
+					solution['maxMw']['xp'][e] = {j: float('nan') for j in rxnK}
+					solution['maxMw']['xn'][e] = {j: float('nan') for j in rxnK}
 
 			#store data
 			infeas[e] = infeasJ
 			bound[e] = boundJ
 			obj[e] = objJ
-			metModel[e] = metModelJ
+			# metModel[e] = metModel
 			solStat[e] = solStatJ
+			rhs[e] = rhsJ
 
 		#summarize the final solution state
 		if any([k == 'infeasible' for k in solStat.values()]):
@@ -680,8 +732,9 @@ class MetFormulae(DataObject):
 		mipInfo.infeas, mipInfo.bound, mipInfo.obj, mipInfo.solution, \
 		mipInfo.metModel, mipInfo.final, mipInfo.solStat \
 		= infeas, bound, obj, solution, metModel, solFinal, solStat
+		mipInfo.rhs = rhs
 		mipInfo.mwRange = (sum([obj[e]['minMw'] for e in ele]), sum([obj[e]['maxMw'] for e in ele]))
-
+		mipInfo.formulae = tuple([formulaDict2Str({e: solution[s]['m'][e][metI] for e in ele}) for s in ['minMw', 'maxMw']])
 		return mipInfo
 
 

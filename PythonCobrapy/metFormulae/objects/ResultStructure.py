@@ -22,26 +22,8 @@ class PreprocessData(DataObject):
 
 class MinInconParsiInfo(DataObject):
 	def __init__(self):
-		self.infeas, self.bound, self.obj, self.solution, self.metModel, \
-		self.final, self.solStat, self.solConstrain = (None for i in range(8))
-		self.__formulae = None
-		self.__mwRange = None
-
-	@property
-	def formulae(self):
-		return self.__formulae
-
-	@formulae.setter
-	def formulae(self, form):
-		self.__formulae = form
-
-	@property
-	def mwRange(self):
-		return self.__mwRange
-
-	@mwRange.setter
-	def mwRange(self, mw):
-		self.__mwRange = mw
+		self.formulae, self.mwRange, self.rhs, self.infeas, self.bound, self.obj, self.solution, self.metModel, \
+		self.final, self.solStat, self.solConstrain = (None for i in range(11))
 		
 class ConservedMoietyInfo(DataObject):
 	def __init__(self):

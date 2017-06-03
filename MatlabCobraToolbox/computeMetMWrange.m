@@ -87,7 +87,7 @@ end
 %     error('%s has an invalid formula %s\n',metKnown{goodForm},metKform{goodForm});
 % end
 %get feasibility tolerance
-if isstruct(varargin{1}) && isfield(varargin{1}, 'feasTol')
+if ~isempty(varargin) && isstruct(varargin{1}) && isfield(varargin{1}, 'feasTol')
     feasTol = varargin{1}.feasTol;
 else
     feasTolInInput = find(strcmp(varargin,'feasTol'),1);

@@ -129,7 +129,7 @@ end
 [metK,metKform] = deal(metK(~metKform), model.metFormulas(metK(~metKform)));
 
 %get feasibility tolerance
-if isstruct(varargin{1}) && isfield(varargin{1}, 'feasTol')
+if ~isempty(varargin) && isstruct(varargin{1}) && isfield(varargin{1}, 'feasTol')
     feasTol = varargin{1}.feasTol;
 else
     feasTolInInput = find(strcmp(varargin,'feasTol'),1);
@@ -447,6 +447,7 @@ end
 solInfo.metUnknown = model.mets(metU);
 solInfo.ele = eleK;
 solInfo.eleConnect = eleConnect;
+solInfo.rxns = model.rxns(rxnC);
 solInfo.metEleUnknwon = metEleU;
 solInfo.S_fill = S_fill;
 solInfo.sol = sol;
@@ -476,12 +477,12 @@ end
 %For each set of elements in eleConnect, choose the latest solution (minForm > minFill > minIncon), recorded in solInfo.stat.
 metEle = zeros(m, nE);
 metEle(metK,:) = metEleK;
-S_fill = sparse(mF, nR);
+S_fill = sparse(mF, numel(model.rxns));
 for jEC = 1:nEC
     metEle(metU,eleConnect(:,jEC)) = metEleU.(solInfo.stat{jEC})(:, eleConnect(:,jEC));
     metFillCon = any(metEleF(:, eleConnect(:,jEC)), 2);
     if any(metFillCon)
-        S_fill(metFillCon, :) = solInfo.S_fill.(solInfo.stat{jEC})(metFillCon, :);
+        S_fill(metFillCon, rxnC) = solInfo.S_fill.(solInfo.stat{jEC})(metFillCon, :);
     end
 end
 %% find conserved moieties

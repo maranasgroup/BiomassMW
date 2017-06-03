@@ -14,8 +14,8 @@ class GenericFormula(object):
 	#In the latter case, the formula and charge in the metabolite would be used.
 	#Make sure the '.charge' property in the cobra object 'Metabolite' has the correct charge. Or include all charges
 	#into the chemical formulae, e.g. 'HCharge1' for proton, 'C3H3O3Charge-1' for pyruvate. Set all .charge to None, float('nan') or 0 to ignore charge balance.
-	def __init__(self, formula='nan'):
-		if isinstance(formula, str):
+	def __init__(self, formula=None):
+		if isinstance(formula, str) or (formula is None):
 			#a string of chemical formula 
 			self.formula = formula
 		elif isinstance(formula, dict):
@@ -90,11 +90,7 @@ class GenericFormula(object):
 					tmp = formDict.pop('Charge',None)
 				else:
 					formDict['Charge'] = n
-				self.__formula = formulaDict2Str(formDict)
-			# else:
-			# 	raise ValueError, 'Charge must be a finite real number.'
-		# else:
-		# 	print "Charge is not set since the formula is unknown (='nan')"
+				self.__formula = formulaDict2Str(formDict)	
 
 	@property
 	def mw(self):
