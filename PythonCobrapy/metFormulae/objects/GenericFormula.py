@@ -6,14 +6,15 @@ element_re = re.compile("([A-Z][a-z_]*)(\-?[0-9.]+[0-9.]?|(?=[A-Z])?)")
 isnan = lambda x: x != x
 
 class GenericFormula(object):
-	#Formula object allowing for generic elements (an uppercase letter followed by lowercase letters or _,
-	#e.g. Generic_element) and 'Charge' in the chemical formula.
-	#formula='', None or 'nan' input would all result in the formula being 'nan', the indeterminate state
-	#For metabolites with zero mass (photons), use 'Mass0' or any element with only 0 stoichiometry
-	#the input formula can also be a dictionary with elements as keys and stoichiometries as values or a cobra.core.Metabolite object. 
-	#In the latter case, the formula and charge in the metabolite would be used.
-	#Make sure the '.charge' property in the cobra object 'Metabolite' has the correct charge. Or include all charges
-	#into the chemical formulae, e.g. 'HCharge1' for proton, 'C3H3O3Charge-1' for pyruvate. Set all .charge to None, float('nan') or 0 to ignore charge balance.
+	'''GenericFormula(formula=None)
+	Formula object allowing for generic elements (an uppercase letter followed by lowercase letters or _, e.g. Generic_element) and 'Charge' in the chemical formula.
+	formula='', None or 'nan' input would all result in the formula being 'nan', the indeterminate state
+	For metabolites with zero mass (photons), use 'Mass0' or any element with only 0 stoichiometry. Will be automatically changed into 'Mass0'
+	The input formula can also be a dictionary with elements as keys and stoichiometries as values or a cobra.core.Metabolite object. 
+	In the latter case, the formula and charge in the metabolite would be used.
+	Make sure the '.charge' property in the cobra object 'Metabolite' has the correct charge. Or include all charges
+	into the chemical formulae, e.g. 'HCharge1' for proton, 'C3H3O3Charge-1' for pyruvate. Set all .charge to None, float('nan') or 0 to ignore charge balance.
+	'''
 	def __init__(self, formula=None):
 		if isinstance(formula, str) or (formula is None):
 			#a string of chemical formula 
@@ -33,10 +34,12 @@ class GenericFormula(object):
 
 	@property
 	def formula(self):
+		'''Formula of the object'''
 		return self.__formula
 
 	@formula.setter
 	def formula(self, text):
+		'''Reset the formula'''
 		self.__formula = 'nan' if text in ['', None] else text
 		if text != 'nan':
 			#reformat the input text to the default format if not undetermined
@@ -44,18 +47,20 @@ class GenericFormula(object):
 
 	@property
 	def formulaWoCharge(self):
-		#reformat the input text to the default format
+		'''Formula without charge'''
 		return re.split('Charge',self.__formula)[0]
 
 	@formulaWoCharge.setter
 	def formulaWoCharge(self,text):
+		'''Reset the formula but keep the charge'''
 		charge = self.charge
 		self.__formula = text
 		self.updateElements({'Charge': charge})
 
 	@property
 	def elements(self):
-		#Transform the formulae into dictionaries. Modify from cobra.core.Metabolite.py
+		'''Return the element-stoichiometry dictionary.
+		Modify from cobra.core.Metabolite.py'''
 		if not isinstance(self.__formula,str):
 			raise ValueError, 'Formula is not a string.'
 		if self.__formula == 'nan':
@@ -73,16 +78,19 @@ class GenericFormula(object):
 	
 	@elements.setter
 	def elements(self, eleDict):
+		'''Reset the formula by an element-stoichiometry dictionary.'''
 		self.__formula = formulaDict2Str(eleDict)
 
 	@property
 	def charge(self):
+		'''Return the charge of the formula'''
 		if self.__formula == 'nan':
 			return float('nan')
 		return self.elements['Charge'] if "Charge" in self.elements else 0
 
 	@charge.setter
 	def charge(self, n):
+		'''Reset the charge'''
 		if self.__formula != 'nan':
 			if isinstance(n, (int, long, float)) and n == n and n not in [float('inf'), float('-inf')]: 
 				formDict = self.elements
@@ -94,18 +102,27 @@ class GenericFormula(object):
 
 	@property
 	def mw(self):
+		'''Return the molecular weight of the formula. Nan for indeterminate forms'''
 		return float('nan') if self.__formula == 'nan' else sum([elements_and_molecular_weights[e] * self.elements[e] for e in self.elements if e in elements_and_molecular_weights])
 
 	@property
 	def unknown(self):
+		'''Return True for indeterminate forms'''
 		return self.__formula == 'nan'
 
 	@property
 	def generic(self):
-		#unknown metabolites are not counted as generic
+		'''Return True if the formula contains any generic elements.
+		Unknown metabolites are not counted as generic
+		'''
 		return False if self.__formula == 'nan' else any([e not in elements_and_molecular_weights and e != 'Charge' for e in self.elements])
 	
 	def updateElements(self, updateDict=None, add=True, **kwargs):
+		'''Update the formula by adding the new dictionary updateDict into it.
+		When add = True, if an element in updateDict is already in the formula, sum up the stoichiometries in the original formula and updateDict
+		When add = False, replace the stoichiometry of an existing element
+		kwargs allow for key-value argument inputs, e.g. updateElements(C=1,O=2)
+		'''
 		formDict = self.elements
 		if 'nan' in formDict:
 			print 'Unknwon formula cannot be updated using .updateElements'

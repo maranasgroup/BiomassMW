@@ -1,6 +1,8 @@
 import numpy
 
 def solution_infeasibility(model, sol):
+	'''Return the infeasibility of the solution returned by model.optimize() for a cobra model 'model'
+	'''
 	if sol.fluxes is None:
 		return float('inf')
 	if False:
@@ -15,7 +17,8 @@ def solution_infeasibility(model, sol):
 	return infeas
 
 def active_met_rxn(model):
-	#find dead end metabolites of a COBRA model
+	'''Return [list of active metabolites, list of active reactions] of a COBRA model. Being active means being not dead end.
+	'''
 	deadMet, deadRxn = [], []
 	while True:
 		finish = True
@@ -36,6 +39,10 @@ def active_met_rxn(model):
 	return [[i for i in model.metabolites if i not in deadMet], [j for j in model.reactions if j not in deadRxn]]
 
 def formulaDict2Str(formDict, wtCharge=True, dMax=12):
+	'''Convert an element-stoichiometry dictionary into a string of chemical formula.
+	'nan' for indeterminate forms. 'Mass0' for empty dictionary or all stoichiometries = 0.
+	The elements C, H, N, O, P, S are prioritized if present. 'Charge' is present at the end stating the charge of the metabolite
+	'''
 	if 'nan' in formDict or any([x != x or x in [float('infinity'), -float('infinity')] for x in formDict.values()]):
 		return 'nan'
 	if not bool(formDict) or not any(formDict.values()):
@@ -71,6 +78,9 @@ def formulaDict2Str(formDict, wtCharge=True, dMax=12):
   	return s	
 
 def num2alpha(index, charSet='_abcdefghijklmnopqrstuvwxyz'):
+	''' Transform an integer into the corresponding base-27 representation, with '_' equivalent to '0' and 'z' to the last digit.
+	Used to automatically name conserved moieties. Called by computeMetForm
+	'''
 	N, s = len(charSet), ''
 	k = index / N
 	while k > 0:
@@ -81,8 +91,9 @@ def num2alpha(index, charSet='_abcdefghijklmnopqrstuvwxyz'):
 
 	
 def extreme_rays_from_null_basis(A, tolerance=None):
-	#A is a matrix in list format
-
+	'''Calculate a subset of the extreme rays of the matrix A (in the format of list of list of rows)
+	Return a numpy matrix.
+	'''
 	def rref(A, tolerance=None):
 		#Find the reduced row echolon form of A. Follow the implementation in Metatool, rref.m, which is much faster than the original Matlab implementation
 		#http://pinguin.biologie.uni-jena.de/bioinformatik/networks/metatool/metatool5.1/metatool5.1.html

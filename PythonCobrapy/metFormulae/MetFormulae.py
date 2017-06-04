@@ -16,8 +16,13 @@ except ImportError:
 element_re = re.compile("([A-Z][a-z_]*)(\-?[0-9.]+[0-9.]?|(?=[A-Z])?)")
 
 class MetFormulae(DataObject):
+	'''MetFormulae is a class for performing minimum inconsistency under parsimony (MIP) to determine the chemical formulae or the range for the molecular weight of a metabolite
+	Must be initialized with a cobra model: MetFormulae(cobra_model)
+	'''
+
 	#this class property determines whether conserved moiety calculation can be performed
 	__cddImported = cddImported
+
 	def __init__(self, cobra_model):
 		#must be associated with a normal cobra model
 		if isinstance(cobra_model, Model):
@@ -31,6 +36,25 @@ class MetFormulae(DataObject):
 		self.__solver = cobra_model.solver
 
 	def computeMetForm(self, metKnown=None, rxns=None, metFill=['HCharge'], findCM='null', deadend=True, nameCM=0, **kwargs):
+		'''Compute the chemical formulas of the unknown metabolites given the formulae for a set of known metabolites using a set of reactions.
+		metKnown: metabolites with known formulae, in a list or Dictlist of metabolite objects or a list of metabolite IDs. Defaulted all metabolites with formulae.
+		rxns: reactions used for balancing, in a list or Dictlist of metabolite objects or a list of metabolite IDs. Defaulted all active non-exchange reactions.
+		metFill: metabolites for automatically filling inconsistency, in a list of chemical formulae. Default 'HCharge' (proton)
+		findCM: Method used to calculate extreme rays for conserved moieties. 'null' (default, rational null basis from reduced row echelon form) or 'cdd' (using the package pycddlib). Skip the calculation for all other values.
+		deadend: Include deadend metabolites or not when calculating extreme rays (default True, include)
+		nameCM: 0 to use defaulted names 'Conserve_xx' for all moieties.
+		        1 to use defaulted names only for conserved moieties involved in deadend metabolites. Interactively name others.
+		        2 to name all conserved moieties identified.
+		**kwargs: name-value parameters for optimizing cobrapy models, e.g. tolerance_feasibility=1e-9
+		Return a ResultStructure object with the following attributes:
+			formulae: the final formulae for unknonw metabolites
+			S_fill: a dictionary of stoichiometric coefficients for filling metabolites
+			rxnBalance: {rxn:{e: balance}} dictionary for the elemental balance for each element e of each reaction rxn  
+			model: a copy of the input cobra model with updated chemical formulae
+			mipInfo: MinInconParsiInfo object summarizing the results of solving MIP.
+			cmInfo: ConservedMoietyInfo object containing the conserved moiety information.
+		Also avaialble as self.metFormResults
+		'''
 		if not hasattr(self, 'pre'):
 			#Pre-porocessing
 			print 'Preprocessing ... %s' %datetime.datetime.now()
@@ -52,6 +76,24 @@ class MetFormulae(DataObject):
 		return metFormResults
 
 	def computeMetRange(self, metInterest, metKnown=None, rxns=None, **kwargs):
+		'''Compute the minimum and maximum possible MW of the target metabolite
+		metInterest: metabolite of interest, in a metabolite object or ID.
+		metKnown: metabolites with known formulae, in a list or Dictlist of metabolite objects or a list of metabolite IDs. Defaulted all metabolites with formulae.
+		rxns: reactions used for balancing, in a list or Dictlist of metabolite objects or a list of metabolite IDs. Defaulted all active non-exchange reactions.
+		**kwargs: name-value parameters for optimizing cobrapy models, e.g. tolerance_feasibility=1e-9
+		Return MinInconParsiInfo object summarizing the results of solving MIP.
+			formulae: (formula for min MW, formula max MW)
+			mwRange: (min MW, max MW)
+			rhs: {e: {i: RHS[i] for all metabolite i}} the RHS value in the MIP problem for each element solved. (computeMetRange only)
+			infeas: infeasibility of each solve
+			bound: bound used for total inconsistency or the relaxation value eps0 for each solve
+			obj: objective function value for each solve
+			solution: solution values for each type of variables (m, xp, xn)
+			metModel: the MIP problem solved for each element as a cobra model. Same model but different rhs for different elements.
+			final: the final status of the solution
+			solStat: solution status for each element/connected set of elements
+		Also avaialble as self.metRangeResults
+		'''
 		if not hasattr(self, 'pre'):
 			#Pre-porocessing
 			print 'Preprocessing ... %s' %datetime.datetime.now()
@@ -62,6 +104,8 @@ class MetFormulae(DataObject):
 		return mipInfo
 
 	def preprocessing(self, metKnown=None, rxns=None, metFill = ['HCharge'], **kwargs):
+		'''Preprocessing for running minInconParsi or minInconParsi_mwRange. Called by computeMetForm or computeMetRange
+		'''
 		model = self.model
 		#metabolites with known formulae
 		if metKnown is None:
@@ -134,6 +178,18 @@ class MetFormulae(DataObject):
 		return
 
 	def minInconParsi(self, **kwargs):
+		'''The main step called by computeMetForm to solve the MIP problem.
+		Return a MinInconParsiInfo object summarizing the results of solving MIP.
+			formulae: result formulae
+			infeas: infeasibility of each solve
+			bound: bound used for total inconsistency or the relaxation value eps0 for each solve
+			obj: objective function value for each solve
+			solution: solution values for each type of variables (m, xp, xn, Ap, An)
+			metModel: the MIP problems solved for each connected set of elements as individual cobra models
+			final: the final status of the solution
+			solStat: solution status for each connected set of elements
+			solConstrain: 'minIncon' or 'minFill' indicating the solution used to constrain the minimal formulae problem.
+		'''
 		inf, neg_inf = self.infinity, self.negative_infinity
 		pre = self.pre
 		metK, metU, metF, rxnK, ele, eleConnect, metFillConnect, feasTol, digitRounded \
@@ -398,8 +454,12 @@ class MetFormulae(DataObject):
 		return mipInfo
 
 	def conserved_moieties(self, mipInfo, findCM='null', deadend=True, nameCM=0):
-		#Find conserved moieties by computing extreme rays using the cdd library
-		#Need to have pycddlib installed
+		'''Find conserved moieties by computing extreme rays. Called by computeMetForm
+		Return ConservedMoietyInfo object containing the conserved moiety information:
+		cm: list of conserved moieties, each being a metabolite-coefficient dictionary
+		cmGeneric: list of entries in cm that are generic (no known metabolites involved)
+		cmGenericDict: {fomrula: cmGeneric} dictionary. formula is the GenericFormula object with the defaulted or inputted name as the formula for the conserved moiety.
+		'''
 		model = self.model
 		if (not deadend) or nameCM == 1:
 			activeMets, activeRxns = active_met_rxn(model)
@@ -472,7 +532,8 @@ class MetFormulae(DataObject):
   		return cmInfo
   
 	def getResultsFromMIPandCM(self, mipInfo, cmInfo=None):
-		
+		'''Summarize the final results. Called by computeMetForm
+		'''
 		metFormResults = ResultStructure()
 
 		if mipInfo.final =='infeasible':
@@ -515,6 +576,19 @@ class MetFormulae(DataObject):
 		return metFormResults
 
 	def minInconParsi_mwRange(self, metInterest, **kwargs):
+		'''The main step called by computeMetRange to find the range for the molecular weight
+		Return MinInconParsiInfo object summarizing the results of solving MIP.
+			formulae: (formula for min MW, formula max MW)
+			mwRange: (min MW, max MW)
+			rhs: {e: {i: RHS[i] for all metabolite i}} the RHS value in the MIP problem for each element solved. (computeMetRange only)
+			infeas: infeasibility of each solve
+			bound: bound used for total inconsistency or the relaxation value eps0 for each solve
+			obj: objective function value for each solve
+			solution: solution values for each type of variables (m, xp, xn)
+			metModel: the MIP problem solved for each element as a cobra model. Same model but different rhs for different elements.
+			final: the final status of the solution
+			solStat: solution status for each element/connected set of elements
+		'''
 		inf, neg_inf = self.infinity, self.negative_infinity
 		pre = self.pre
 		metK, metU, rxnK, ele, feasTol, digitRounded \
@@ -740,10 +814,14 @@ class MetFormulae(DataObject):
 
 	@property
 	def solver(self):
+		'''solver used. Default to be model.solver of the input cobra model.
+		'''
 		return self.__solver
 
 	@solver.setter
 	def solver(self, choice):
+		'''change the optimization solver
+		'''
 		self.model.solver = choice
 		self.__solver = self.model.solver
 	

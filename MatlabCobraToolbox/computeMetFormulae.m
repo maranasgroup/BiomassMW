@@ -31,10 +31,6 @@ function [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFo
 %    model:       COBRA model with updated formulas
 %    metCompute:  M_unknown x 2 array of cell with [mets | computed formulas]
 %    ele          Elements corresponding to the row of rxnBal, the coloumn of metEle
-% (the outputs below except 'N' and 'LP' are all structure with .minIncon, 
-% .minFill, .minForm, corresponding to the results from min. inconsistency, 
-% min. adjustment by metFill under min. inconsistency and min. chemical 
-% formulae with inconsistency and adjustment by metFill fixed)
 %    metEle:      Chemical formulas in matrix (#metKnown x #elements)
 %    rxnBal:      Elemental balance of rxns (#elements x #rxns)
 %    S_fill:      Adjustment of the S-matrix by 'metFill' (#metFill x #rxns in the input)
@@ -46,17 +42,22 @@ function [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFo
 %             Elements in the same component mean that they are connected 
 %             by some 'metFill' and are optimized in the same round.
 %       metEleUnknown: the formulae found for unknown metabolites (#met_unknown x #elements)
-%       sol:  Solutions returned by solveCobraLP (#components x 1)
+%       sol:  Solutions returned by solveCobraLP, #components x 1 struct array, 
+%             each with the following three solutions:
+%             .minIncon: minimum inconsistency (Step 1), 
+%             .minFill: minimum adjustment by filling metabolites (Step 2),
+%             .minForm: minimal formulae (Step 3)
 %       var:  Indices of variables corresponding to the vector solInfo.sol.full
 %             (including .m.ele, .xp.ele, .xn.ele, .Ap.metFill, .An.metFill)
-%       infeasibility: infeasibility of each solve (#components x 1)
+%       infeasibility: infeasibility of each solve (#components x 1 struct array,
+%             each with .minIncon, .minFill and .minForm)
 %             The problem is not solved successfully if infeasibility > solInfo.feasTol
 %       bound: .minFill, bounds on total inconsistency for each element.
 %              .minForm, tolerance f used for relaxing the bounds on inconsistency
 %              and adjustment (ub = value x (1 + f), lb = value x (1 - f)) (#components x 1)
 %       feasTol: Tolerance used to determine solution feasibility
 %       stat: cell array of minIncon/minFill/minForm/infeasible stating 
-%             which solution is feasible for the optimization for each eleConnect. 
+%             which solution is feasible for the optimization for each componenet in eleConnect. 
 %       final: minIncon/minFill/minForm/mixed/infeasible stating where 
 %              the final solution metEleUnknwon is obtained from. 
 %              Ideally minForm if no numerical issue on feasibility.

@@ -32,6 +32,9 @@ function [metMWrange,metForm,ele,metEle,rxnBal,infeasibility,inconUB,sol,LP] = c
 %    rxnBal        Elemental balance of each reaction (#elements x #rxns matrix)
 %    infeasibility Infeasibility from the corresponding optimization (#elements x 1 vector)
 %    inconUB       the maximum allowed inconsistency used to obtain solutions (#elements x 1 vector)
+%                  If an element e is generic, it does not contribute to
+%                  the molecular weight and the optimization is not performed.
+%                  inconUB.minMW(e) = inconUB.maxMW(e) = NaN in this case.
 %    sol           #elements x 1 solution structure array returned by solveCobraLP
 %    LP            LP structure for solveCobraLP
 
@@ -129,7 +132,7 @@ cMW = MW(ele);
 [metEle.minIncon, metEle.minMW, metEle.maxMW] = deal(NaN(m, nE));
 [metEle.minIncon(metK,:), metEle.minMW(metK,:), metEle.maxMW(metK,:)] = deal(metEleK);
 %infeasibility of each solve
-[infeasibility.minIncon, infeasibility.minMW, infeasibility.maxMW] = deal(true(nE,1));
+[infeasibility.minIncon, infeasibility.minMW, infeasibility.maxMW] = deal(inf(nE,1));
 %bound on the total inconsistency allowed
 [inconUB.minMW, inconUB.maxMW] = deal(zeros(nE, 1));
 for j = 1:nE
