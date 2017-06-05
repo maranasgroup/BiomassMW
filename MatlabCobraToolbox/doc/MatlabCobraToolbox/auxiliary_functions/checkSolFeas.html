@@ -55,7 +55,7 @@ This function calls:
 <li><a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>	Check the feasibility of a solution given a COBRA model structure or a CPLEX dynamic object and a solution</li></ul>
 This function is called by:
 <ul style="list-style-image:url(../../matlabicon.gif)">
-<li><a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>	Check the feasibility of a solution given a COBRA model structure or a CPLEX dynamic object and a solution</li><li><a href="../../MatlabCobraToolbox/computeFormulasFillMets.html" class="code" title="function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMets(model,metKnown,rxns,metFill,findCM,nameCM,param)">computeFormulasFillMets</a>	Compute the chemical formulas of the unknown metabolites</li><li><a href="../../MatlabCobraToolbox/computeFormulasFillMetsCplex.html" class="code" title="function [model,metCompute,S_fill,rxnBal,ele,metEle,N,LP] = computeFormulasFillMetsCplex(model,metKnown,rxns,metFill,findCM,nameCM,param)">computeFormulasFillMetsCplex</a>	Compute the chemical formulas of the unknown metabolites</li><li><a href="../../MatlabCobraToolbox/computeMetMWrange.html" class="code" title="function [metMWrange,metForm,ele,metEle,rxnBal,infeasibility,inconUB,sol,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,varargin)">computeMetMWrange</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li><li><a href="../../MatlabCobraToolbox/computeMetMWrange0.html" class="code" title="function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP,sol] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,varargin)">computeMetMWrange0</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li><li><a href="../../MatlabCobraToolbox/computeMetMWrangeCplex.html" class="code" title="function [metMWrange,metForm,metFeas,rxnBal,ele,metEle,LP] = computeMetMWrangeCplex(model,metKnown,metInterest,rxns,percent,param)">computeMetMWrangeCplex</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li></ul>
+<li><a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>	Check the feasibility of a solution given a COBRA model structure or a CPLEX dynamic object and a solution</li><li><a href="../../MatlabCobraToolbox/computeMetFormulae.html" class="code" title="function [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFormulae(model,metKnown,rxns,metFill,findCM,nameCM,varargin)">computeMetFormulae</a>	Compute the chemical formulas of the unknown metabolites using a set of metabolites with known formulae and a set of reactions.</li><li><a href="../../MatlabCobraToolbox/computeMetMWrange.html" class="code" title="function [metMWrange,metForm,ele,metEle,rxnBal,infeasibility,inconUB,sol,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,varargin)">computeMetMWrange</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li></ul>
 <!-- crossreference -->
 
 
@@ -120,198 +120,195 @@ This function is called by:
 0058         varargout = {[]};
 0059         <span class="keyword">return</span>
 0060     <span class="keyword">end</span>
-0061     <span class="keyword">if</span> isfield(LP, <span class="string">'sense'</span>)
-0062         cs = LP.sense; <span class="comment">%gurobi</span>
-0063         E = <span class="string">'='</span>;
-0064         L = <span class="string">'&lt;'</span>;
-0065         G = <span class="string">'&gt;'</span>;
-0066     <span class="keyword">elseif</span> isfield(LP,<span class="string">'csense'</span>)
-0067         cs = LP.csense; <span class="comment">%COBRA</span>
-0068         E = <span class="string">'E'</span>;
-0069         L = <span class="string">'L'</span>;
-0070         G = <span class="string">'G'</span>;
+0061     E = <span class="string">'E'</span>;
+0062     L = <span class="string">'L'</span>;
+0063     G = <span class="string">'G'</span>;
+0064     <span class="keyword">if</span> isfield(LP, <span class="string">'sense'</span>)
+0065         cs = LP.sense; <span class="comment">%gurobi</span>
+0066         E = <span class="string">'='</span>;
+0067         L = <span class="string">'&lt;'</span>;
+0068         G = <span class="string">'&gt;'</span>;
+0069     <span class="keyword">elseif</span> isfield(LP,<span class="string">'csense'</span>)
+0070         cs = LP.csense; <span class="comment">%COBRA</span>
 0071     <span class="keyword">else</span>
 0072         <span class="comment">%COBRA model, no csense, assume all equal</span>
 0073         cs = char(<span class="string">'E'</span> * ones(size(A,1),1));
-0074         E = <span class="string">'E'</span>;
-0075         L = <span class="string">'L'</span>;
-0076         G = <span class="string">'G'</span>;
-0077     <span class="keyword">end</span>
-0078    <span class="comment">%check field in sol</span>
-0079     <span class="keyword">if</span> isstruct(sol)
-0080         sol0 = sol;
-0081         <span class="keyword">if</span> isfield(sol,<span class="string">'full'</span>) 
-0082             sol = sol.full;
-0083         <span class="keyword">elseif</span> isfield(sol, <span class="string">'x'</span>)
-0084             sol = sol.x;
-0085         <span class="keyword">else</span>
-0086             varargout = {[]};
-0087             <span class="keyword">return</span>
-0088         <span class="keyword">end</span>
-0089     <span class="keyword">elseif</span> ismatrix(sol) &amp;&amp; size(sol,1) == size(A,2)
-0090         sol = sol;
-0091     <span class="keyword">else</span>
-0092         varargout = {[]};
-0093         <span class="keyword">return</span>
-0094     <span class="keyword">end</span>
-0095     
-0096     b = A * sol;
-0097     b0 = b0 * ones(1, size(sol,2));
-0098     <span class="keyword">if</span> maxInfeas
-0099         infeas = zeros(1,size(sol,2));
-0100         infeas = max([infeas; max(abs(b(cs == E,:) - b0(cs == E,:)),[],1)],[],1);
-0101         infeas = max([infeas; max(b(cs == L,:) - b0(cs == L,:),[],1)], [], 1);
-0102         infeas = max([infeas; max(b0(cs == G,:) - b(cs == G,:),[],1)], [], 1);
-0103         <span class="keyword">if</span> isfield(LP,<span class="string">'lb'</span>)
-0104             infeas = max([infeas; max(LP.lb*ones(1,size(sol,2)) - sol, [],1)], [], 1);
+0074     <span class="keyword">end</span>
+0075    <span class="comment">%check field in sol</span>
+0076     <span class="keyword">if</span> isstruct(sol)
+0077         sol0 = sol;
+0078         <span class="keyword">if</span> isfield(sol,<span class="string">'full'</span>) 
+0079             sol = sol.full;
+0080         <span class="keyword">elseif</span> isfield(sol, <span class="string">'x'</span>)
+0081             sol = sol.x;
+0082         <span class="keyword">else</span>
+0083             varargout = {[]};
+0084             <span class="keyword">return</span>
+0085         <span class="keyword">end</span>
+0086     <span class="keyword">elseif</span> ismatrix(sol) &amp;&amp; size(sol,1) == size(A,2)
+0087         sol = sol;
+0088     <span class="keyword">else</span>
+0089         varargout = {[]};
+0090         <span class="keyword">return</span>
+0091     <span class="keyword">end</span>
+0092     
+0093     b = A * sol;
+0094     b0 = b0 * ones(1, size(sol,2));
+0095     <span class="keyword">if</span> maxInfeas
+0096         infeas = zeros(1,size(sol,2));
+0097         infeas = max([infeas; max(abs(b(cs == E,:) - b0(cs == E,:)),[],1)],[],1);
+0098         infeas = max([infeas; max(b(cs == L,:) - b0(cs == L,:),[],1)], [], 1);
+0099         infeas = max([infeas; max(b0(cs == G,:) - b(cs == G,:),[],1)], [], 1);
+0100         <span class="keyword">if</span> isfield(LP,<span class="string">'lb'</span>)
+0101             infeas = max([infeas; max(LP.lb*ones(1,size(sol,2)) - sol, [],1)], [], 1);
+0102         <span class="keyword">end</span>
+0103         <span class="keyword">if</span> isfield(LP,<span class="string">'ub'</span>)
+0104             infeas = max([infeas; max(sol - LP.ub*ones(1,size(sol,2)), [],1)], [], 1);
 0105         <span class="keyword">end</span>
-0106         <span class="keyword">if</span> isfield(LP,<span class="string">'ub'</span>)
-0107             infeas = max([infeas; max(sol - LP.ub*ones(1,size(sol,2)), [],1)], [], 1);
-0108         <span class="keyword">end</span>
-0109     <span class="keyword">else</span>
-0110         infeas.con = zeros(size(A,1),size(sol,2));
-0111         infeas.con(cs == E,:) = abs(b(cs == E,:) - b0(cs == E,:));
-0112         infeas.con(cs == L,:) = b(cs == L,:) - b0(cs == L,:);
-0113         infeas.con(cs == G,:) = b0(cs == G,:) - b(cs == G,:);
-0114         infeas.con(infeas.con &lt; 0) = 0;
-0115         <span class="keyword">if</span> isfield(LP,<span class="string">'lb'</span>)
-0116             infeas.lb = LP.lb*ones(1,size(sol,2)) - sol;
-0117             infeas.lb(infeas.lb &lt; 0) = 0;
-0118         <span class="keyword">else</span>
-0119             infeas.lb = [];
-0120         <span class="keyword">end</span>
-0121         <span class="keyword">if</span> isfield(LP,<span class="string">'ub'</span>)
-0122             infeas.ub = sol - LP.ub*ones(1,size(sol,2));
-0123             infeas.ub(infeas.ub &lt; 0) = 0;
-0124         <span class="keyword">else</span>
-0125             infeas.ub = [];
-0126         <span class="keyword">end</span>
-0127     <span class="keyword">end</span>
-0128         
-0129     <span class="keyword">if</span> isstruct(sol0)
-0130         <span class="keyword">if</span> nargin &lt; 4
-0131             tol = 1e-8;
+0106     <span class="keyword">else</span>
+0107         infeas.con = zeros(size(A,1),size(sol,2));
+0108         infeas.con(cs == E,:) = abs(b(cs == E,:) - b0(cs == E,:));
+0109         infeas.con(cs == L,:) = b(cs == L,:) - b0(cs == L,:);
+0110         infeas.con(cs == G,:) = b0(cs == G,:) - b(cs == G,:);
+0111         infeas.con(infeas.con &lt; 0) = 0;
+0112         <span class="keyword">if</span> isfield(LP,<span class="string">'lb'</span>)
+0113             infeas.lb = LP.lb*ones(1,size(sol,2)) - sol;
+0114             infeas.lb(infeas.lb &lt; 0) = 0;
+0115         <span class="keyword">else</span>
+0116             infeas.lb = [];
+0117         <span class="keyword">end</span>
+0118         <span class="keyword">if</span> isfield(LP,<span class="string">'ub'</span>)
+0119             infeas.ub = sol - LP.ub*ones(1,size(sol,2));
+0120             infeas.ub(infeas.ub &lt; 0) = 0;
+0121         <span class="keyword">else</span>
+0122             infeas.ub = [];
+0123         <span class="keyword">end</span>
+0124     <span class="keyword">end</span>
+0125         
+0126     <span class="keyword">if</span> isstruct(sol0)
+0127         <span class="keyword">if</span> nargin &lt; 4
+0128             tol = 1e-8;
+0129         <span class="keyword">end</span>
+0130         <span class="keyword">if</span> infeas &lt; tol
+0131             sol0.stat = 1;
 0132         <span class="keyword">end</span>
-0133         <span class="keyword">if</span> infeas &lt; tol
-0134             sol0.stat = 1;
-0135         <span class="keyword">end</span>
-0136         varargout = {infeas, sol0};
-0137     <span class="keyword">else</span>
-0138         varargout = {infeas};
-0139     <span class="keyword">end</span>
-0140 <span class="keyword">else</span>
-0141     <span class="comment">%For Cplex object</span>
-0142     <span class="keyword">if</span> nargin &lt; 2 || isempty(sol)
-0143         <span class="comment">%check the solution in the Cplex object if no solution input</span>
-0144         <span class="keyword">if</span> isprop(LP,<span class="string">'Solution'</span>) &amp;&amp; isfield(LP.Solution,<span class="string">'x'</span>) &amp;&amp; ~isempty(LP.Solution.x)
-0145             sol = LP.Solution.x;
-0146         <span class="keyword">else</span>
-0147             varargout = {NaN};
-0148             <span class="keyword">return</span>
-0149         <span class="keyword">end</span>
-0150     <span class="keyword">end</span>
-0151  
-0152     <span class="comment">%for checking an array of solutions</span>
-0153     <span class="comment">%(Each column in the matrix sol is a solution)</span>
-0154     mSize = 30; <span class="comment">%optimized parameter for my computer for models of large size (~1e4)</span>
-0155     <span class="comment">%10 ~ 100 are good</span>
-0156     <span class="keyword">if</span> isfield(LP.Model,<span class="string">'indicator'</span>) &amp;&amp; ~internal
-0157         [varInd, compleInd, rhsInd] = deal(zeros(numel(LP.Model.indicator),1));
-0158         conInd = zeros(numel(LP.Model.indicator),size(LP.Model.A,2));
-0159         csInd = char(<span class="string">'E'</span>*ones(1,numel(LP.Model.indicator)));
-0160         <span class="keyword">for</span> j = 1:numel(LP.Model.indicator)
-0161             varInd(j) = LP.Model.indicator(j).variable;
-0162             compleInd(j) = LP.Model.indicator(j).complemented;
-0163             conInd(j,:) = LP.Model.indicator(j).a';
-0164             rhsInd(j) = LP.Model.indicator(j).rhs;
-0165             csInd(j) = LP.Model.indicator(j).sense;
-0166         <span class="keyword">end</span>
-0167         
-0168     <span class="keyword">end</span>
-0169     b = LP.Model.A * sol;
-0170     
-0171     <span class="keyword">if</span> maxInfeas
-0172         infeas = zeros(1,size(sol, 2));
-0173         <span class="keyword">if</span> size(sol, 2) &gt; mSize
-0174             <span class="comment">%compute mSize solutions each time</span>
-0175             <span class="keyword">for</span> j = 1:floor(size(sol, 2) / mSize)
-0176                 infeas(((j-1)*mSize + 1):(j*mSize)) = <a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP, <span class="keyword">...</span>
-0177                     sol(:,((j-1)*mSize + 1):(j*mSize)),maxInfeas,[],true);
-0178             <span class="keyword">end</span>
-0179             <span class="comment">%compute the remaining solutions</span>
-0180             <span class="keyword">if</span> mod(size(sol, 2), mSize) &gt; 0
-0181                 infeas((floor(size(sol, 2) / mSize)*mSize+1):end) = <a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP, <span class="keyword">...</span>
-0182                     sol(:,(floor(size(sol, 2) / mSize)*mSize+1):end),maxInfeas,[],true);
-0183             <span class="keyword">end</span>
-0184             
-0185         <span class="keyword">else</span>
-0186             infeas = max([infeas; max(repmat(LP.Model.lhs,1,size(b,2)) - b,[],1)],[],1);
-0187             infeas = max([infeas; max(b - repmat(LP.Model.rhs,1,size(b,2)),[],1)],[],1);
-0188             infeas = max([infeas; max(repmat(LP.Model.lb,1,size(sol,2)) - sol,[],1)],[],1);
-0189             infeas = max([infeas; max(sol - repmat(LP.Model.ub,1,size(sol,2)),[],1)],[],1);
-0190             <span class="keyword">if</span> isfield(LP.Model,<span class="string">'indicator'</span>)
-0191                 compleInd2 = compleInd * ones(1, size(sol,2));
-0192                 bInd = (conInd * sol) .* <span class="keyword">...</span>
+0133         varargout = {infeas, sol0};
+0134     <span class="keyword">else</span>
+0135         varargout = {infeas};
+0136     <span class="keyword">end</span>
+0137 <span class="keyword">else</span>
+0138     <span class="comment">%For Cplex object</span>
+0139     <span class="keyword">if</span> nargin &lt; 2 || isempty(sol)
+0140         <span class="comment">%check the solution in the Cplex object if no solution input</span>
+0141         <span class="keyword">if</span> isprop(LP,<span class="string">'Solution'</span>) &amp;&amp; isfield(LP.Solution,<span class="string">'x'</span>) &amp;&amp; ~isempty(LP.Solution.x)
+0142             sol = LP.Solution.x;
+0143         <span class="keyword">else</span>
+0144             varargout = {NaN};
+0145             <span class="keyword">return</span>
+0146         <span class="keyword">end</span>
+0147     <span class="keyword">end</span>
+0148  
+0149     <span class="comment">%for checking an array of solutions</span>
+0150     <span class="comment">%(Each column in the matrix sol is a solution)</span>
+0151     mSize = 30; <span class="comment">%optimized parameter for my computer for models of large size (~1e4)</span>
+0152     <span class="comment">%10 ~ 100 are good</span>
+0153     <span class="keyword">if</span> isfield(LP.Model,<span class="string">'indicator'</span>) &amp;&amp; ~internal
+0154         [varInd, compleInd, rhsInd] = deal(zeros(numel(LP.Model.indicator),1));
+0155         conInd = zeros(numel(LP.Model.indicator),size(LP.Model.A,2));
+0156         csInd = char(<span class="string">'E'</span>*ones(1,numel(LP.Model.indicator)));
+0157         <span class="keyword">for</span> j = 1:numel(LP.Model.indicator)
+0158             varInd(j) = LP.Model.indicator(j).variable;
+0159             compleInd(j) = LP.Model.indicator(j).complemented;
+0160             conInd(j,:) = LP.Model.indicator(j).a';
+0161             rhsInd(j) = LP.Model.indicator(j).rhs;
+0162             csInd(j) = LP.Model.indicator(j).sense;
+0163         <span class="keyword">end</span>
+0164         
+0165     <span class="keyword">end</span>
+0166     b = LP.Model.A * sol;
+0167     
+0168     <span class="keyword">if</span> maxInfeas
+0169         infeas = zeros(1,size(sol, 2));
+0170         <span class="keyword">if</span> size(sol, 2) &gt; mSize
+0171             <span class="comment">%compute mSize solutions each time</span>
+0172             <span class="keyword">for</span> j = 1:floor(size(sol, 2) / mSize)
+0173                 infeas(((j-1)*mSize + 1):(j*mSize)) = <a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP, <span class="keyword">...</span>
+0174                     sol(:,((j-1)*mSize + 1):(j*mSize)),maxInfeas,[],true);
+0175             <span class="keyword">end</span>
+0176             <span class="comment">%compute the remaining solutions</span>
+0177             <span class="keyword">if</span> mod(size(sol, 2), mSize) &gt; 0
+0178                 infeas((floor(size(sol, 2) / mSize)*mSize+1):end) = <a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP, <span class="keyword">...</span>
+0179                     sol(:,(floor(size(sol, 2) / mSize)*mSize+1):end),maxInfeas,[],true);
+0180             <span class="keyword">end</span>
+0181             
+0182         <span class="keyword">else</span>
+0183             infeas = max([infeas; max(repmat(LP.Model.lhs,1,size(b,2)) - b,[],1)],[],1);
+0184             infeas = max([infeas; max(b - repmat(LP.Model.rhs,1,size(b,2)),[],1)],[],1);
+0185             infeas = max([infeas; max(repmat(LP.Model.lb,1,size(sol,2)) - sol,[],1)],[],1);
+0186             infeas = max([infeas; max(sol - repmat(LP.Model.ub,1,size(sol,2)),[],1)],[],1);
+0187             <span class="keyword">if</span> isfield(LP.Model,<span class="string">'indicator'</span>)
+0188                 compleInd2 = compleInd * ones(1, size(sol,2));
+0189                 bInd = (conInd * sol) .* <span class="keyword">...</span>
+0190                     (sol(varInd,:) &gt; 0.9 &amp; compleInd2 == 0 | <span class="keyword">...</span><span class="comment"> %active indicator</span>
+0191                     sol(varInd,:) &lt; 1e-2 &amp; compleInd2 == 1);
+0192                 b0Ind = (rhsInd * ones(1, size(sol,2))) .* <span class="keyword">...</span>
 0193                     (sol(varInd,:) &gt; 0.9 &amp; compleInd2 == 0 | <span class="keyword">...</span><span class="comment"> %active indicator</span>
 0194                     sol(varInd,:) &lt; 1e-2 &amp; compleInd2 == 1);
-0195                 b0Ind = (rhsInd * ones(1, size(sol,2))) .* <span class="keyword">...</span>
-0196                     (sol(varInd,:) &gt; 0.9 &amp; compleInd2 == 0 | <span class="keyword">...</span><span class="comment"> %active indicator</span>
-0197                     sol(varInd,:) &lt; 1e-2 &amp; compleInd2 == 1);
-0198                 infeas = max([infeas; max(abs(bInd(csInd == <span class="string">'E'</span>,:) - b0Ind(csInd == <span class="string">'E'</span>,:)),[],1)],[],1);
-0199                 infeas = max([infeas; max(bInd(csInd == <span class="string">'L'</span>,:) - b0Ind(csInd == <span class="string">'L'</span>,:),[],1)], [], 1);
-0200                 infeas = max([infeas; max(b0Ind(csInd == <span class="string">'G'</span>,:) - bInd(csInd == <span class="string">'G'</span>,:),[],1)], [], 1);
-0201             <span class="keyword">end</span>
-0202         <span class="keyword">end</span>
-0203     <span class="keyword">else</span>
-0204         infeas =struct();
-0205         [infeas.con, infeas.lb, infeas.ub, infeas.ind] = deal([]);
-0206         list = {<span class="string">'con'</span>,<span class="string">'lb'</span>,<span class="string">'ub'</span>,<span class="string">'ind'</span>};
-0207         <span class="keyword">if</span> size(sol, 2) &gt; mSize
-0208             <span class="comment">%compute mSize solutions each time</span>
-0209             <span class="keyword">for</span> j = 1:floor(size(sol, 2) / mSize)
-0210                 infeasJ = <a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP, <span class="keyword">...</span>
-0211                     sol(:,((j-1)*mSize + 1):(j*mSize)),maxInfeas,[],true);
-0212                 <span class="keyword">for</span> k = list
-0213                     infeas.(k{:}) = [infeas.(k{:}), infeasJ.(k{:})];
-0214                 <span class="keyword">end</span>
-0215             <span class="keyword">end</span>
-0216             <span class="comment">%compute the remaining solutions</span>
-0217             <span class="keyword">if</span> mod(size(sol, 2), mSize) &gt; 0
-0218                 infeasJ = <a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP, <span class="keyword">...</span>
-0219                     sol(:,(floor(size(sol, 2) / mSize)*mSize+1):end),maxInfeas,[],true);
-0220                 <span class="keyword">for</span> k = list
-0221                     infeas.(k{:}) = [infeas.(k{:}), infeasJ.(k{:})];
-0222                 <span class="keyword">end</span>
-0223             <span class="keyword">end</span>
-0224         <span class="keyword">else</span>
-0225             infeas.con = repmat(LP.Model.lhs,1,size(b,2)) - b;
-0226             infeas.con = max(infeas.con, b - repmat(LP.Model.rhs,1,size(b,2)));
-0227             infeas.con(infeas.con &lt; 0) = 0;
-0228             infeas.lb = repmat(LP.Model.lb,1,size(sol,2)) - sol;
-0229             infeas.lb(infeas.lb &lt; 0) = 0;
-0230             infeas.ub = sol - repmat(LP.Model.ub,1,size(sol,2));
-0231             infeas.ub(infeas.ub &lt; 0) = 0;
-0232             <span class="keyword">if</span> isfield(LP.Model,<span class="string">'indicator'</span>)
-0233                 compleInd2 = compleInd * ones(1, size(sol,2));
-0234                 bInd = (conInd * sol);
-0235                 b0Ind = rhsInd * ones(1, size(sol,2));
-0236                 infeas.ind = zeros(size(conInd,1), size(sol,2));
-0237                 infeas.ind(csInd == <span class="string">'E'</span>,:) = abs(bInd(csInd == <span class="string">'E'</span>,:) - b0Ind(csInd == <span class="string">'E'</span>,:));
-0238                 infeas.ind(csInd == <span class="string">'L'</span>,:) = bInd(csInd == <span class="string">'L'</span>,:) - b0Ind(csInd == <span class="string">'L'</span>,:);
-0239                 infeas.ind(csInd == <span class="string">'G'</span>,:) = b0Ind(csInd == <span class="string">'G'</span>,:) - bInd(csInd == <span class="string">'G'</span>,:);
-0240                 infeas.ind(infeas.ind &lt; 0) = 0;
-0241                 infeas.ind(~((sol(varInd,:) &gt; 0.9 &amp; compleInd2 == 0) | <span class="keyword">...</span><span class="comment"> %active indicator</span>
-0242                     (sol(varInd,:) &lt; 1e-2 &amp; compleInd2 == 1))) = -inf;
-0243             <span class="keyword">else</span>
-0244                 infeas.ind = [];
-0245             <span class="keyword">end</span>
-0246         <span class="keyword">end</span>
-0247     <span class="keyword">end</span>
-0248     varargout = {infeas};
-0249 <span class="keyword">end</span>
-0250 
-0251 <span class="keyword">end</span>
-0252</pre></div>
-<hr><address>Generated on Tue 09-May-2017 12:37:40 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2003</address>
+0195                 infeas = max([infeas; max(abs(bInd(csInd == <span class="string">'E'</span>,:) - b0Ind(csInd == <span class="string">'E'</span>,:)),[],1)],[],1);
+0196                 infeas = max([infeas; max(bInd(csInd == <span class="string">'L'</span>,:) - b0Ind(csInd == <span class="string">'L'</span>,:),[],1)], [], 1);
+0197                 infeas = max([infeas; max(b0Ind(csInd == <span class="string">'G'</span>,:) - bInd(csInd == <span class="string">'G'</span>,:),[],1)], [], 1);
+0198             <span class="keyword">end</span>
+0199         <span class="keyword">end</span>
+0200     <span class="keyword">else</span>
+0201         infeas =struct();
+0202         [infeas.con, infeas.lb, infeas.ub, infeas.ind] = deal([]);
+0203         list = {<span class="string">'con'</span>,<span class="string">'lb'</span>,<span class="string">'ub'</span>,<span class="string">'ind'</span>};
+0204         <span class="keyword">if</span> size(sol, 2) &gt; mSize
+0205             <span class="comment">%compute mSize solutions each time</span>
+0206             <span class="keyword">for</span> j = 1:floor(size(sol, 2) / mSize)
+0207                 infeasJ = <a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP, <span class="keyword">...</span>
+0208                     sol(:,((j-1)*mSize + 1):(j*mSize)),maxInfeas,[],true);
+0209                 <span class="keyword">for</span> k = list
+0210                     infeas.(k{:}) = [infeas.(k{:}), infeasJ.(k{:})];
+0211                 <span class="keyword">end</span>
+0212             <span class="keyword">end</span>
+0213             <span class="comment">%compute the remaining solutions</span>
+0214             <span class="keyword">if</span> mod(size(sol, 2), mSize) &gt; 0
+0215                 infeasJ = <a href="checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP, <span class="keyword">...</span>
+0216                     sol(:,(floor(size(sol, 2) / mSize)*mSize+1):end),maxInfeas,[],true);
+0217                 <span class="keyword">for</span> k = list
+0218                     infeas.(k{:}) = [infeas.(k{:}), infeasJ.(k{:})];
+0219                 <span class="keyword">end</span>
+0220             <span class="keyword">end</span>
+0221         <span class="keyword">else</span>
+0222             infeas.con = repmat(LP.Model.lhs,1,size(b,2)) - b;
+0223             infeas.con = max(infeas.con, b - repmat(LP.Model.rhs,1,size(b,2)));
+0224             infeas.con(infeas.con &lt; 0) = 0;
+0225             infeas.lb = repmat(LP.Model.lb,1,size(sol,2)) - sol;
+0226             infeas.lb(infeas.lb &lt; 0) = 0;
+0227             infeas.ub = sol - repmat(LP.Model.ub,1,size(sol,2));
+0228             infeas.ub(infeas.ub &lt; 0) = 0;
+0229             <span class="keyword">if</span> isfield(LP.Model,<span class="string">'indicator'</span>)
+0230                 compleInd2 = compleInd * ones(1, size(sol,2));
+0231                 bInd = (conInd * sol);
+0232                 b0Ind = rhsInd * ones(1, size(sol,2));
+0233                 infeas.ind = zeros(size(conInd,1), size(sol,2));
+0234                 infeas.ind(csInd == <span class="string">'E'</span>,:) = abs(bInd(csInd == <span class="string">'E'</span>,:) - b0Ind(csInd == <span class="string">'E'</span>,:));
+0235                 infeas.ind(csInd == <span class="string">'L'</span>,:) = bInd(csInd == <span class="string">'L'</span>,:) - b0Ind(csInd == <span class="string">'L'</span>,:);
+0236                 infeas.ind(csInd == <span class="string">'G'</span>,:) = b0Ind(csInd == <span class="string">'G'</span>,:) - bInd(csInd == <span class="string">'G'</span>,:);
+0237                 infeas.ind(infeas.ind &lt; 0) = 0;
+0238                 infeas.ind(~((sol(varInd,:) &gt; 0.9 &amp; compleInd2 == 0) | <span class="keyword">...</span><span class="comment"> %active indicator</span>
+0239                     (sol(varInd,:) &lt; 1e-2 &amp; compleInd2 == 1))) = -inf;
+0240             <span class="keyword">else</span>
+0241                 infeas.ind = [];
+0242             <span class="keyword">end</span>
+0243         <span class="keyword">end</span>
+0244     <span class="keyword">end</span>
+0245     varargout = {infeas};
+0246 <span class="keyword">end</span>
+0247 
+0248 <span class="keyword">end</span>
+0249</pre></div>
+<hr><address>Generated on Mon 05-Jun-2017 00:25:59 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2003</address>
 </body>
 </html>
