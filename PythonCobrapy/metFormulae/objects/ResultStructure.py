@@ -60,7 +60,7 @@ class ConservedMoietyInfo(DataObject):
   
 class ResultStructure(DataObject):
 	'''ResultStructure object with the following attributes:
-		formulae: the final formulae for unknonw metabolites
+		formulae: the final formulae for unknown metabolites
 		S_fill: a dictionary of stoichiometric coefficients for filling metabolites
 		rxnBalance: {rxn:{e: balance}} dictionary for the elemental balance for each element e of each reaction rxn  
 		model: a copy of the input cobra model with updated chemical formulae
