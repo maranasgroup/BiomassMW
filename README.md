@@ -1,8 +1,7 @@
 # BiomassMW
 MATLAB and Python functions for determining the chemical formulae and molecular weights of macromolecules in genome-scale metabolic models.
-Require Cobrapy.
 
-MATLAB functions (MatlabCobraToolbox):
+MATLAB functions (`MatlabCobraToolbox/` Require **[COBRA Toolbox](https://github.com/opencobra/cobratoolbox)**):
 Main functions: 
 1. computeMetFormulae
 Compute the chemical formulas of the unknown metabolites given the formulas for a set of known metabolites using a set of reactions.
@@ -22,7 +21,7 @@ For calculating molecular weights
 For conveniently setting CPLEX parameters in Matlab
 
 
-Python functions (PythonCobrapy)
+Python functions (`PythonCobrapy/` Require **[Cobrapy](https://github.com/opencobra/cobrapy)**)
 Main object: MetFormulae in metFormulae/MetFormulae.py. 
 It is initialized with a cobra model. Use the following two methods to calculate chemical formulae or the range for biomass MW:
 - .computeMetForm: Compute the chemical formulas of the unknown metabolites given the formulas for a set of known metabolites using a set of reactions.
