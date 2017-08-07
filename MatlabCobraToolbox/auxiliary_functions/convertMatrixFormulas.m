@@ -12,7 +12,7 @@ if nargin < 3
 end
 %combine duplicate elements
 [eleUni,ia,ib] = unique(element);
-if numel(eleUni) < numel(element);
+if numel(eleUni) < numel(element)
     for j = 1:numel(eleUni)
         metEle(:,ia(j)) = sum(metEle(:,ib == j),2);
     end
@@ -39,23 +39,24 @@ for j = 1:size(metEle,1)
         else
             metJ = '';
             for k = 1:numel(element)
-                if metEle(j,k) == 1 && ~strcmp(element{k},'Charge')
-                    metJ = [metJ element{k}];
-                elseif abs(metEle(j,k)) > 10^(-dMax)
+                if abs(metEle(j,k)) > 10^(-dMax)
                     n = full(metEle(j,k));
                     d = 0;
                     while abs(round(n,d) - n) > 1e-10 && d < dMax
                         d = d + 1;
                     end
                     n = round(n,d);
-                    str = sprintf(['%.' num2str(dMax) 'f'],n);
-                    str = regexp(fliplr(str),'0*+(\d*\.\d*\-?)|(.*)','tokens');
-                    str = fliplr(str{1}{1});
-                    if str(end) == '.'
-                        str(end) = ''; 
+                    if n == 1 && ~strcmp(element{k},'Charge')
+                        metJ = strcat(metJ, element{k});
+                    else
+                        str = sprintf(['%.' num2str(dMax) 'f'],n);
+                        str = regexp(fliplr(str),'0*+(\d*\.\d*\-?)|(.*)','tokens');
+                        str = fliplr(str{1}{1});
+                        if str(end) == '.'
+                            str(end) = '';
+                        end
+                        metJ = strcat(metJ, element{k}, str);
                     end
-                    metJ = [metJ element{k} str];
-                    
                 end
             end
         end
