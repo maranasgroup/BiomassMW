@@ -1,0 +1,9 @@
+/* Created by mdot for Matlab */
+digraph m2html {
+  matlab_example -> computeMetFormulae;
+  matlab_example -> computeMetMWrange;
+
+  computeMetFormulae [URL="computeMetFormulae.html"];
+  computeMetMWrange [URL="computeMetMWrange.html"];
+  matlab_example [URL="matlab_example.html"];
+}

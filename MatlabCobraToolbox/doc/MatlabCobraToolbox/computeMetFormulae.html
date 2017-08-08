@@ -6,9 +6,12 @@
   <meta name="keywords" content="computeMetFormulae">
   <meta name="description" content="Compute the chemical formulas of the unknown metabolites using a set of metabolites with known formulae and a set of reactions.">
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-  <meta name="generator" content="m2html &copy; 2003 Guillaume Flandin">
+  <meta name="generator" content="m2html &copy; 2005 Guillaume Flandin">
   <meta name="robots" content="index, follow">
   <link type="text/css" rel="stylesheet" href="../m2html.css">
+  <script type="text/javascript">
+    if (top.frames.length == 0) { top.location = "../index.html"; };
+  </script>
 </head>
 <body>
 <a name="_top"></a>
@@ -27,66 +30,69 @@
  To include charge balance in the computation, simply in all formulas, add e.g. 'Charge2' for charge +2 or 'Charge-1' for charge -1.
  The minimum conflict is found by allowing filling up by metFill (e.g. H+) in the reaction stoichiometry
 
- [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFormulae(model,metKnown,rxns,metFill,findCM,nameCM,params)
- Input:
-   model:      COBRA model
-  (below are optional)
-   metKnown:   Known metabolites (character array or IDs) 
-               [default all mets with nonempty .metFormulas]
-   rxns:       The set of reactions for inferring formulae (character array or IDs)
-               [default all non-exchange reactions]
-   metFill:    The chemical formulas for compounds for freely filling the
-               imbalance, e.g. {'HCharge1', 'H2O'} [default 'HCharge1']
-   findCM:     Find conserved moieties from the left null space of S. Options:
-      'efmtool': Use EFMtool (most comprehensive, but computational 
-                 cost may be high if there are many deadend mets)
-      'null':    Use the rational basis computed by Matlab 
-      N:         Directly supply the matrix for conserved moieties 
-                 (rational basis or the set of extreme rays)
-      false:     Not to find conserved moieties and return minimal formulae
-      [default 'efmtool' if 'CalculateFluxModes.m' is in path, else switch to rational basis]
-   nameCM:     Name the identified conserved moieties or not [default 0]
-      0:  The program assigns default names for conserved moieties (Conserve_a, Conserve_b, ...)
-      1:  Name true conserved moieties interactively (exclude dead end mets). 
-      2:  Name all interactively (including dead end)
-   params:     Parameters for solveCobraLP, in a struct or name-value arguments
+ USAGE:
+    [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFormulae(model,metKnown,rxns,metFill,findCM,nameCM,params)
 
- Output:
-    model:       COBRA model with updated formulas
-    metCompute:  M_unknown x 2 array of cell with [mets | computed formulas]
-    ele          Elements corresponding to the row of rxnBal, the coloumn of metEle
-    metEle:      Chemical formulas in matrix (#metKnown x #elements)
-    rxnBal:      Elemental balance of rxns (#elements x #rxns)
-    S_fill:      Adjustment of the S-matrix by 'metFill' (#metFill x #rxns in the input)
-    solInfo:     Info for the Minimum Inconsistency under Parsimony optimization:
-       metUnknown: mets whose formulae are being solved for (#met_unknown x 1 cell)
-       ele:  The original elements present in the model's formulae. 
-             May have less elements than the output 'ele' above. (#elements x 1 cell)
-       eleConnect: connected components partitioning solInf.ele (#elements x #components logical matrix)
-             Elements in the same component mean that they are connected 
-             by some 'metFill' and are optimized in the same round.
-       metEleUnknown: the formulae found for unknown metabolites (#met_unknown x #elements)
-       sol:  Solutions returned by solveCobraLP, #components x 1 struct array, 
-             each with the following three solutions:
-             .minIncon: minimum inconsistency (Step 1), 
-             .minFill: minimum adjustment by filling metabolites (Step 2),
-             .minForm: minimal formulae (Step 3)
-       var:  Indices of variables corresponding to the vector solInfo.sol.full
-             (including .m.ele, .xp.ele, .xn.ele, .Ap.metFill, .An.metFill)
-       infeasibility: infeasibility of each solve (#components x 1 struct array,
-             each with .minIncon, .minFill and .minForm)
-             The problem is not solved successfully if infeasibility &gt; solInfo.feasTol
-       bound: .minFill, bounds on total inconsistency for each element.
-              .minForm, tolerance f used for relaxing the bounds on inconsistency
-              and adjustment (ub = value x (1 + f), lb = value x (1 - f)) (#components x 1)
-       feasTol: Tolerance used to determine solution feasibility
-       stat: cell array of minIncon/minFill/minForm/infeasible stating 
-             which solution is feasible for the optimization for each componenet in eleConnect. 
-       final: minIncon/minFill/minForm/mixed/infeasible stating where 
-              the final solution metEleUnknwon is obtained from. 
-              Ideally minForm if no numerical issue on feasibility.
-    N:           Set of extreme rays or rational null space matrix
-    LP:          LP problem structure for solveCobraLP (#components x 1)</pre></div>
+ INPUT:
+    model:          COBRA model
+
+ OPTIONAL INPUTS:
+    metKnown:       Known metabolites (cell array of strings or vector of IDs) 
+                    [default all mets with nonempty .metFormulas]
+    rxns:           The set of reactions for inferring formulae (cell array of strings or vector of IDs)
+                    [default all non-exchange reactions]
+    metFill:        The chemical formulas for compounds for freely filling the
+                    imbalance, e.g. {'HCharge1', 'H2O'} [default 'HCharge1']
+    findCM:         Find conserved moieties from the left null space of S. Options:
+                      * 'efmtool': Use EFMtool (most comprehensive, recommanded, but computational 
+                                   cost may be high if there are many deadend mets)
+                      * 'null':    Use the rational basis computed by Matlab 
+                      * N:         Directly supply the matrix :math:`N` for conserved moieties 
+                                   (rational basis or the set of extreme rays)
+                      * false:     Not to find conserved moieties and return minimal formulae
+                      [default 'efmtool' if 'CalculateFluxModes.m' is in path, else switch to rational basis]
+    nameCM:         Name the identified conserved moieties or not [default 0]
+                      * 0:  The program assigns default names for conserved moieties (Conserve_a, Conserve_b, ...)
+                      * 1:  Name true conserved moieties interactively (exclude dead end mets). 
+                      * 2:  Name all interactively (including dead end)
+    params:         Parameters for `solveCobraLP`, in a struct or name-value arguments. See `solveCobraLP` for details
+
+ OUTPUTS:
+    model:          COBRA model with updated formulas
+    metCompute:     #unknown mets x 2 cel array [mets | computed formulas]
+    ele:            Elements corresponding to the row of rxnBal, the coloumn of metEle
+    metEle:         Chemical formulas in matrix (#metKnown x #elements)
+    rxnBal:         Elemental balance of rxns (#elements x #rxns)
+    S_fill:         Adjustment of the S-matrix by 'metFill' (#metFill x #rxns in the input)
+    solInfo:        Info for the Minimum Inconsistency under Parsimony optimization:
+                      * metUnknown:    mets whose formulae are being solved for (#met_unknown x 1 cell)
+                      * ele:           the original elements present in the model's formulae. 
+                                       May have less elements than the output 'ele' above. (#elements x 1 cell)
+                      * eleConnect:    connected components partitioning solInf.ele (#elements x #components logical matrix).
+                                       Elements in the same component mean that they are connected
+                                       by some 'metFill' and are optimized in the same round.
+                      * metEleUnknown: the formulae found for unknown metabolites (#met_unknown x #elements)
+                      * sol:           solutions returned by solveCobraLP, #components x 1 struct array, 
+                                       each with the following three solutions:
+                                         * .minIncon: minimum inconsistency (Step 1), 
+                                         * .minFill: minimum adjustment by filling metabolites (Step 2),
+                                         * .minForm: minimal formulae (Step 3)
+                      * var:           indices of variables corresponding to the vector solInfo.sol.full
+                                       (including .m.ele, .xp.ele, .xn.ele, .Ap.metFill, .An.metFill)
+                      * infeasibility: infeasibility of each solve (#components x 1 struct array,
+                                       each with .minIncon, .minFill and .minForm)
+                                       The problem is not solved successfully if infeasibility &gt; solInfo.feasTol
+                      * bound:         * .minFill, bounds on total inconsistency for each element.
+                                       * .minForm, tolerance f used for relaxing the bounds on inconsistency
+                                                   and adjustment (ub = value x (1 + f), lb = value x (1 - f)) (#components x 1)
+                      * feasTol:       tolerance used to determine solution feasibility
+                      * stat:          cell array of minIncon/minFill/minForm/infeasible stating which 
+                                       solution is feasible for the optimization for each componenet in .eleConnect. 
+                      * final:         minIncon/minFill/minForm/mixed/infeasible stating where 
+                                       the final solution metEleUnknwon is obtained from. 
+                                       Ideally minForm if no numerical issue on feasibility.
+    N:              the set of extreme rays or the rational null space matrix
+    LP:             LP problem structure for solveCobraLP (#components x 1)</pre></div>
 
 <!-- crossreference -->
 <h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
@@ -95,179 +101,180 @@ This function calls:
 <li><a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>	Check the elemental balance of the reactions in the COBRA mode 'model'.</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>	Check the feasibility of a solution given a COBRA model structure or a CPLEX dynamic object and a solution</li><li><a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>	Convert the matrix form of the chemical formulae into string form</li></ul>
 This function is called by:
 <ul style="list-style-image:url(../matlabicon.gif)">
-</ul>
+<li><a href="matlab_example.html" class="code" title="">matlab_example</a>	Example script on applying the method to the E. coli iJO1366 model</li></ul>
 <!-- crossreference -->
 
 <h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
 <ul style="list-style-image:url(../matlabicon.gif)">
 <li><a href="#_sub1" class="code">function s = num2alpha(index,charSet)</a></li></ul>
+
 <h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
 <div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFormulae(model,metKnown,rxns,metFill,findCM,nameCM,varargin)</a>
 0002 <span class="comment">% Compute the chemical formulas of the unknown metabolites using a set of metabolites with known formulae and a set of reactions.</span>
 0003 <span class="comment">% To include charge balance in the computation, simply in all formulas, add e.g. 'Charge2' for charge +2 or 'Charge-1' for charge -1.</span>
 0004 <span class="comment">% The minimum conflict is found by allowing filling up by metFill (e.g. H+) in the reaction stoichiometry</span>
 0005 <span class="comment">%</span>
-0006 <span class="comment">% [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFormulae(model,metKnown,rxns,metFill,findCM,nameCM,params)</span>
-0007 <span class="comment">% Input:</span>
-0008 <span class="comment">%   model:      COBRA model</span>
-0009 <span class="comment">%  (below are optional)</span>
-0010 <span class="comment">%   metKnown:   Known metabolites (character array or IDs)</span>
-0011 <span class="comment">%               [default all mets with nonempty .metFormulas]</span>
-0012 <span class="comment">%   rxns:       The set of reactions for inferring formulae (character array or IDs)</span>
-0013 <span class="comment">%               [default all non-exchange reactions]</span>
-0014 <span class="comment">%   metFill:    The chemical formulas for compounds for freely filling the</span>
-0015 <span class="comment">%               imbalance, e.g. {'HCharge1', 'H2O'} [default 'HCharge1']</span>
-0016 <span class="comment">%   findCM:     Find conserved moieties from the left null space of S. Options:</span>
-0017 <span class="comment">%      'efmtool': Use EFMtool (most comprehensive, but computational</span>
-0018 <span class="comment">%                 cost may be high if there are many deadend mets)</span>
-0019 <span class="comment">%      'null':    Use the rational basis computed by Matlab</span>
-0020 <span class="comment">%      N:         Directly supply the matrix for conserved moieties</span>
-0021 <span class="comment">%                 (rational basis or the set of extreme rays)</span>
-0022 <span class="comment">%      false:     Not to find conserved moieties and return minimal formulae</span>
-0023 <span class="comment">%      [default 'efmtool' if 'CalculateFluxModes.m' is in path, else switch to rational basis]</span>
-0024 <span class="comment">%   nameCM:     Name the identified conserved moieties or not [default 0]</span>
-0025 <span class="comment">%      0:  The program assigns default names for conserved moieties (Conserve_a, Conserve_b, ...)</span>
-0026 <span class="comment">%      1:  Name true conserved moieties interactively (exclude dead end mets).</span>
-0027 <span class="comment">%      2:  Name all interactively (including dead end)</span>
-0028 <span class="comment">%   params:     Parameters for solveCobraLP, in a struct or name-value arguments</span>
-0029 <span class="comment">%</span>
-0030 <span class="comment">% Output:</span>
-0031 <span class="comment">%    model:       COBRA model with updated formulas</span>
-0032 <span class="comment">%    metCompute:  M_unknown x 2 array of cell with [mets | computed formulas]</span>
-0033 <span class="comment">%    ele          Elements corresponding to the row of rxnBal, the coloumn of metEle</span>
-0034 <span class="comment">%    metEle:      Chemical formulas in matrix (#metKnown x #elements)</span>
-0035 <span class="comment">%    rxnBal:      Elemental balance of rxns (#elements x #rxns)</span>
-0036 <span class="comment">%    S_fill:      Adjustment of the S-matrix by 'metFill' (#metFill x #rxns in the input)</span>
-0037 <span class="comment">%    solInfo:     Info for the Minimum Inconsistency under Parsimony optimization:</span>
-0038 <span class="comment">%       metUnknown: mets whose formulae are being solved for (#met_unknown x 1 cell)</span>
-0039 <span class="comment">%       ele:  The original elements present in the model's formulae.</span>
-0040 <span class="comment">%             May have less elements than the output 'ele' above. (#elements x 1 cell)</span>
-0041 <span class="comment">%       eleConnect: connected components partitioning solInf.ele (#elements x #components logical matrix)</span>
-0042 <span class="comment">%             Elements in the same component mean that they are connected</span>
-0043 <span class="comment">%             by some 'metFill' and are optimized in the same round.</span>
-0044 <span class="comment">%       metEleUnknown: the formulae found for unknown metabolites (#met_unknown x #elements)</span>
-0045 <span class="comment">%       sol:  Solutions returned by solveCobraLP, #components x 1 struct array,</span>
-0046 <span class="comment">%             each with the following three solutions:</span>
-0047 <span class="comment">%             .minIncon: minimum inconsistency (Step 1),</span>
-0048 <span class="comment">%             .minFill: minimum adjustment by filling metabolites (Step 2),</span>
-0049 <span class="comment">%             .minForm: minimal formulae (Step 3)</span>
-0050 <span class="comment">%       var:  Indices of variables corresponding to the vector solInfo.sol.full</span>
-0051 <span class="comment">%             (including .m.ele, .xp.ele, .xn.ele, .Ap.metFill, .An.metFill)</span>
-0052 <span class="comment">%       infeasibility: infeasibility of each solve (#components x 1 struct array,</span>
-0053 <span class="comment">%             each with .minIncon, .minFill and .minForm)</span>
-0054 <span class="comment">%             The problem is not solved successfully if infeasibility &gt; solInfo.feasTol</span>
-0055 <span class="comment">%       bound: .minFill, bounds on total inconsistency for each element.</span>
-0056 <span class="comment">%              .minForm, tolerance f used for relaxing the bounds on inconsistency</span>
-0057 <span class="comment">%              and adjustment (ub = value x (1 + f), lb = value x (1 - f)) (#components x 1)</span>
-0058 <span class="comment">%       feasTol: Tolerance used to determine solution feasibility</span>
-0059 <span class="comment">%       stat: cell array of minIncon/minFill/minForm/infeasible stating</span>
-0060 <span class="comment">%             which solution is feasible for the optimization for each componenet in eleConnect.</span>
-0061 <span class="comment">%       final: minIncon/minFill/minForm/mixed/infeasible stating where</span>
-0062 <span class="comment">%              the final solution metEleUnknwon is obtained from.</span>
-0063 <span class="comment">%              Ideally minForm if no numerical issue on feasibility.</span>
-0064 <span class="comment">%    N:           Set of extreme rays or rational null space matrix</span>
-0065 <span class="comment">%    LP:          LP problem structure for solveCobraLP (#components x 1)</span>
-0066 
-0067 <span class="comment">%As an internal parameter deciding to include dead end metabolites or not</span>
-0068 <span class="comment">%when calculating conserved moieties</span>
-0069 deadCM = true;
-0070 
-0071 <span class="keyword">if</span> ~isfield(model,<span class="string">'metFormulas'</span>)
-0072     error(<span class="string">'model does not have the field ''metFormulas.'''</span>)
-0073 <span class="keyword">end</span>
-0074 <span class="keyword">if</span> nargin &lt; 6 || isempty(nameCM)
-0075     nameCM = 0;
-0076 <span class="keyword">end</span>
-0077 <span class="keyword">if</span> nargin &lt; 5 || isempty(findCM)
-0078     findCM = <span class="string">'efmtool'</span>;
-0079 <span class="keyword">end</span>
-0080 <span class="keyword">if</span> nargin &lt; 4 || isempty(metFill)
-0081     <span class="comment">%defaulted proton for filling imbalance</span>
-0082     metFill = {<span class="string">'HCharge1'</span>};
-0083 <span class="keyword">elseif</span> ischar(metFill)
-0084     metFill = {metFill};
-0085 <span class="keyword">end</span>
-0086 <span class="keyword">if</span> nargin &lt; 3 || isempty(rxns)
-0087     rxns = find(sum(model.S~=0,1) &gt; 1 &amp; (model.lb ~= 0 | model.ub ~= 0)');
-0088 <span class="keyword">end</span>
-0089 <span class="keyword">if</span> ischar(rxns)
-0090     rxns = {rxns};
-0091 <span class="keyword">end</span>
-0092 <span class="keyword">if</span> iscell(rxns)
-0093     rxnC = findRxnIDs(model,rxns);
-0094 <span class="keyword">else</span>
-0095     rxnC = rxns;
-0096 <span class="keyword">end</span>
-0097 <span class="keyword">if</span> any(rxnC == 0)
-0098     <span class="keyword">if</span> iscell(rxns)
-0099         error(<span class="string">'%s in rxns is not in the model.'</span>, rxns{find(rxnC==0,1)});
-0100     <span class="keyword">else</span>
-0101         error(<span class="string">'rxns index must be positive integer.'</span>)
-0102     <span class="keyword">end</span>
-0103 <span class="keyword">end</span>
-0104 <span class="keyword">if</span> nargin &lt; 2 || isempty(metKnown)
-0105     metKnown = model.mets(~cellfun(@isempty,model.metFormulas));
-0106 <span class="keyword">end</span>
-0107 <span class="keyword">if</span> ischar(metKnown)
-0108     metKnown = {metKnown};
-0109 <span class="keyword">end</span>
-0110 <span class="keyword">if</span> iscell(metKnown)
-0111     metK = findMetIDs(model,metKnown);
-0112 <span class="keyword">else</span>
-0113     metK = metKnown;
-0114 <span class="keyword">end</span>
-0115 <span class="keyword">if</span> any(metK == 0) 
-0116     <span class="keyword">if</span> iscell(metKnown)
-0117         error(<span class="string">'%s in metKnown is not in the model.'</span>, metKnown{find(metK==0,1)});
-0118     <span class="keyword">else</span>
-0119         error(<span class="string">'metKnown index must be positive integer.'</span>)
-0120     <span class="keyword">end</span>
-0121 <span class="keyword">end</span>
-0122 metKform = cellfun(@isempty,model.metFormulas(metK));
-0123 <span class="keyword">if</span> any(metKform)
-0124     warning(<span class="string">'Some mets in metKnown do not have formulas in the model. Ignore them.'</span>);
-0125 <span class="keyword">end</span>
-0126 <span class="comment">%All formulas must be in the form of e.g. Abc2Bcd1. Elements are</span>
-0127 <span class="comment">%represented by one capital letter followed by lower case letter or</span>
-0128 <span class="comment">%underscore, followed by a number for the stoichiometry.</span>
-0129 <span class="comment">%Brackets/parentheses are also supported.</span>
-0130 [metK,metKform] = deal(metK(~metKform), model.metFormulas(metK(~metKform)));
-0131 
-0132 <span class="comment">%get feasibility tolerance</span>
-0133 <span class="keyword">if</span> ~isempty(varargin) &amp;&amp; isstruct(varargin{1}) &amp;&amp; isfield(varargin{1}, <span class="string">'feasTol'</span>)
-0134     feasTol = varargin{1}.feasTol;
-0135 <span class="keyword">else</span>
-0136     feasTolInInput = find(strcmp(varargin,<span class="string">'feasTol'</span>),1);
-0137     <span class="keyword">if</span> ~isempty(feasTolInInput)
-0138         <span class="keyword">if</span> feasTolInInput == numel(varargin) || ~isnumeric(varargin{feasTolInInput+1})
-0139             error(<span class="string">'Invalid input for the parameter feasTol.'</span>);
-0140         <span class="keyword">end</span>
-0141         feasTol = varargin{find(feasTolInInput)+1};
-0142     <span class="keyword">else</span>
-0143         feasTol = getCobraSolverParams(<span class="string">'LP'</span>,{<span class="string">'feasTol'</span>});
-0144     <span class="keyword">end</span>
-0145 <span class="keyword">end</span>
-0146 <span class="comment">%</span>
-0147 digitRounded = 12;
-0148 <span class="comment">%% Preprocess</span>
-0149 <span class="comment">%formulas for known metabolites</span>
-0150 [~,eleK,metEleK] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metKform);
-0151 <span class="comment">%formulas for filling metabolites</span>
-0152 [~,eleK,metEleF] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metFill, eleK);
-0153 <span class="keyword">if</span> numel(eleK) &gt; size(metEleK,2)
-0154     metEleK = [metEleK, zeros(size(metEleK,1), numel(eleK) - size(metEleK,2))];
-0155 <span class="keyword">end</span>
-0156 eleCh = strcmp(eleK,<span class="string">'Charge'</span>); <span class="comment">%index for charge coloumn</span>
-0157 m = size(model.S,1); <span class="comment">%number of mets</span>
-0158 nE = numel(eleK); <span class="comment">%number of elements</span>
-0159 mK = numel(metK); <span class="comment">%number of known mets</span>
-0160 mU = m - mK; <span class="comment">%number of unknown mets</span>
-0161 mF = numel(metFill); <span class="comment">%number of filling mets</span>
-0162 metU = setdiff((1:m)',metK); <span class="comment">%index for unknown mets</span>
-0163 nR = numel(rxnC); <span class="comment">%number of reactions that should be mass balanced</span>
-0164 
-0165 <span class="comment">%elements connected because of metFill. They need to be optimized in the</span>
-0166 <span class="comment">%same problem.</span>
+0006 <span class="comment">% USAGE:</span>
+0007 <span class="comment">%    [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFormulae(model,metKnown,rxns,metFill,findCM,nameCM,params)</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% INPUT:</span>
+0010 <span class="comment">%    model:          COBRA model</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% OPTIONAL INPUTS:</span>
+0013 <span class="comment">%    metKnown:       Known metabolites (cell array of strings or vector of IDs)</span>
+0014 <span class="comment">%                    [default all mets with nonempty .metFormulas]</span>
+0015 <span class="comment">%    rxns:           The set of reactions for inferring formulae (cell array of strings or vector of IDs)</span>
+0016 <span class="comment">%                    [default all non-exchange reactions]</span>
+0017 <span class="comment">%    metFill:        The chemical formulas for compounds for freely filling the</span>
+0018 <span class="comment">%                    imbalance, e.g. {'HCharge1', 'H2O'} [default 'HCharge1']</span>
+0019 <span class="comment">%    findCM:         Find conserved moieties from the left null space of S. Options:</span>
+0020 <span class="comment">%                      * 'efmtool': Use EFMtool (most comprehensive, recommanded, but computational</span>
+0021 <span class="comment">%                                   cost may be high if there are many deadend mets)</span>
+0022 <span class="comment">%                      * 'null':    Use the rational basis computed by Matlab</span>
+0023 <span class="comment">%                      * N:         Directly supply the matrix :math:`N` for conserved moieties</span>
+0024 <span class="comment">%                                   (rational basis or the set of extreme rays)</span>
+0025 <span class="comment">%                      * false:     Not to find conserved moieties and return minimal formulae</span>
+0026 <span class="comment">%                      [default 'efmtool' if 'CalculateFluxModes.m' is in path, else switch to rational basis]</span>
+0027 <span class="comment">%    nameCM:         Name the identified conserved moieties or not [default 0]</span>
+0028 <span class="comment">%                      * 0:  The program assigns default names for conserved moieties (Conserve_a, Conserve_b, ...)</span>
+0029 <span class="comment">%                      * 1:  Name true conserved moieties interactively (exclude dead end mets).</span>
+0030 <span class="comment">%                      * 2:  Name all interactively (including dead end)</span>
+0031 <span class="comment">%    params:         Parameters for `solveCobraLP`, in a struct or name-value arguments. See `solveCobraLP` for details</span>
+0032 <span class="comment">%</span>
+0033 <span class="comment">% OUTPUTS:</span>
+0034 <span class="comment">%    model:          COBRA model with updated formulas</span>
+0035 <span class="comment">%    metCompute:     #unknown mets x 2 cel array [mets | computed formulas]</span>
+0036 <span class="comment">%    ele:            Elements corresponding to the row of rxnBal, the coloumn of metEle</span>
+0037 <span class="comment">%    metEle:         Chemical formulas in matrix (#metKnown x #elements)</span>
+0038 <span class="comment">%    rxnBal:         Elemental balance of rxns (#elements x #rxns)</span>
+0039 <span class="comment">%    S_fill:         Adjustment of the S-matrix by 'metFill' (#metFill x #rxns in the input)</span>
+0040 <span class="comment">%    solInfo:        Info for the Minimum Inconsistency under Parsimony optimization:</span>
+0041 <span class="comment">%                      * metUnknown:    mets whose formulae are being solved for (#met_unknown x 1 cell)</span>
+0042 <span class="comment">%                      * ele:           the original elements present in the model's formulae.</span>
+0043 <span class="comment">%                                       May have less elements than the output 'ele' above. (#elements x 1 cell)</span>
+0044 <span class="comment">%                      * eleConnect:    connected components partitioning solInf.ele (#elements x #components logical matrix).</span>
+0045 <span class="comment">%                                       Elements in the same component mean that they are connected</span>
+0046 <span class="comment">%                                       by some 'metFill' and are optimized in the same round.</span>
+0047 <span class="comment">%                      * metEleUnknown: the formulae found for unknown metabolites (#met_unknown x #elements)</span>
+0048 <span class="comment">%                      * sol:           solutions returned by solveCobraLP, #components x 1 struct array,</span>
+0049 <span class="comment">%                                       each with the following three solutions:</span>
+0050 <span class="comment">%                                         * .minIncon: minimum inconsistency (Step 1),</span>
+0051 <span class="comment">%                                         * .minFill: minimum adjustment by filling metabolites (Step 2),</span>
+0052 <span class="comment">%                                         * .minForm: minimal formulae (Step 3)</span>
+0053 <span class="comment">%                      * var:           indices of variables corresponding to the vector solInfo.sol.full</span>
+0054 <span class="comment">%                                       (including .m.ele, .xp.ele, .xn.ele, .Ap.metFill, .An.metFill)</span>
+0055 <span class="comment">%                      * infeasibility: infeasibility of each solve (#components x 1 struct array,</span>
+0056 <span class="comment">%                                       each with .minIncon, .minFill and .minForm)</span>
+0057 <span class="comment">%                                       The problem is not solved successfully if infeasibility &gt; solInfo.feasTol</span>
+0058 <span class="comment">%                      * bound:         * .minFill, bounds on total inconsistency for each element.</span>
+0059 <span class="comment">%                                       * .minForm, tolerance f used for relaxing the bounds on inconsistency</span>
+0060 <span class="comment">%                                                   and adjustment (ub = value x (1 + f), lb = value x (1 - f)) (#components x 1)</span>
+0061 <span class="comment">%                      * feasTol:       tolerance used to determine solution feasibility</span>
+0062 <span class="comment">%                      * stat:          cell array of minIncon/minFill/minForm/infeasible stating which</span>
+0063 <span class="comment">%                                       solution is feasible for the optimization for each componenet in .eleConnect.</span>
+0064 <span class="comment">%                      * final:         minIncon/minFill/minForm/mixed/infeasible stating where</span>
+0065 <span class="comment">%                                       the final solution metEleUnknwon is obtained from.</span>
+0066 <span class="comment">%                                       Ideally minForm if no numerical issue on feasibility.</span>
+0067 <span class="comment">%    N:              the set of extreme rays or the rational null space matrix</span>
+0068 <span class="comment">%    LP:             LP problem structure for solveCobraLP (#components x 1)</span>
+0069 
+0070 <span class="comment">% As an internal parameter deciding to include dead end metabolites or not when calculating conserved moieties</span>
+0071 deadCM = true;
+0072 
+0073 <span class="keyword">if</span> ~isfield(model,<span class="string">'metFormulas'</span>)
+0074     error(<span class="string">'model does not have the field ''metFormulas.'''</span>)
+0075 <span class="keyword">end</span>
+0076 <span class="keyword">if</span> nargin &lt; 6 || isempty(nameCM)
+0077     nameCM = 0;
+0078 <span class="keyword">end</span>
+0079 <span class="keyword">if</span> nargin &lt; 5 || isempty(findCM)
+0080     findCM = <span class="string">'efmtool'</span>;
+0081 <span class="keyword">end</span>
+0082 <span class="keyword">if</span> nargin &lt; 4 || isempty(metFill)
+0083     <span class="comment">% defaulted proton for filling imbalance</span>
+0084     metFill = {<span class="string">'HCharge1'</span>};
+0085 <span class="keyword">elseif</span> ischar(metFill)
+0086     metFill = {metFill};
+0087 <span class="keyword">end</span>
+0088 <span class="keyword">if</span> nargin &lt; 3 || isempty(rxns)
+0089     rxns = find(sum(model.S~=0,1) &gt; 1 &amp; (model.lb ~= 0 | model.ub ~= 0)');
+0090 <span class="keyword">end</span>
+0091 <span class="keyword">if</span> ischar(rxns)
+0092     rxns = {rxns};
+0093 <span class="keyword">end</span>
+0094 <span class="keyword">if</span> iscell(rxns)
+0095     rxnC = findRxnIDs(model,rxns);
+0096 <span class="keyword">else</span>
+0097     rxnC = rxns;
+0098 <span class="keyword">end</span>
+0099 <span class="keyword">if</span> any(rxnC == 0)
+0100     <span class="keyword">if</span> iscell(rxns)
+0101         error(<span class="string">'%s in rxns is not in the model.'</span>, rxns{find(rxnC==0,1)});
+0102     <span class="keyword">else</span>
+0103         error(<span class="string">'rxns index must be positive integer.'</span>)
+0104     <span class="keyword">end</span>
+0105 <span class="keyword">end</span>
+0106 <span class="keyword">if</span> nargin &lt; 2 || isempty(metKnown)
+0107     metKnown = model.mets(~cellfun(@isempty,model.metFormulas));
+0108 <span class="keyword">end</span>
+0109 <span class="keyword">if</span> ischar(metKnown)
+0110     metKnown = {metKnown};
+0111 <span class="keyword">end</span>
+0112 <span class="keyword">if</span> iscell(metKnown)
+0113     metK = findMetIDs(model,metKnown);
+0114 <span class="keyword">else</span>
+0115     metK = metKnown;
+0116 <span class="keyword">end</span>
+0117 <span class="keyword">if</span> any(metK == 0) 
+0118     <span class="keyword">if</span> iscell(metKnown)
+0119         error(<span class="string">'%s in metKnown is not in the model.'</span>, metKnown{find(metK==0,1)});
+0120     <span class="keyword">else</span>
+0121         error(<span class="string">'metKnown index must be positive integer.'</span>)
+0122     <span class="keyword">end</span>
+0123 <span class="keyword">end</span>
+0124 metKform = cellfun(@isempty,model.metFormulas(metK));
+0125 <span class="keyword">if</span> any(metKform)
+0126     warning(<span class="string">'Some mets in metKnown do not have formulas in the model. Ignore them.'</span>);
+0127 <span class="keyword">end</span>
+0128 <span class="comment">% All formulas must be in the form of e.g. Abc2Bcd1. Elements are represented by one capital letter</span>
+0129 <span class="comment">% followed by lower case letter or underscore, followed by a number for the stoichiometry.</span>
+0130 <span class="comment">% Brackets/parentheses and repeated elements are also supported, e.g. CuSO4(H2O)5.</span>
+0131 [metK,metKform] = deal(metK(~metKform), model.metFormulas(metK(~metKform)));
+0132 
+0133 <span class="comment">% get feasibility tolerance</span>
+0134 <span class="keyword">if</span> ~isempty(varargin) &amp;&amp; isstruct(varargin{1}) &amp;&amp; isfield(varargin{1}, <span class="string">'feasTol'</span>)
+0135     feasTol = varargin{1}.feasTol;
+0136 <span class="keyword">else</span>
+0137     feasTolInInput = find(strcmp(varargin,<span class="string">'feasTol'</span>),1);
+0138     <span class="keyword">if</span> ~isempty(feasTolInInput)
+0139         <span class="keyword">if</span> feasTolInInput == numel(varargin) || ~isnumeric(varargin{feasTolInInput+1})
+0140             error(<span class="string">'Invalid input for the parameter feasTol.'</span>);
+0141         <span class="keyword">end</span>
+0142         feasTol = varargin{find(feasTolInInput)+1};
+0143     <span class="keyword">else</span>
+0144         feasTol = getCobraSolverParams(<span class="string">'LP'</span>,{<span class="string">'feasTol'</span>});
+0145     <span class="keyword">end</span>
+0146 <span class="keyword">end</span>
+0147 
+0148 digitRounded = 12;
+0149 <span class="comment">%% Preprocess</span>
+0150 <span class="comment">% formulas for known metabolites</span>
+0151 [~,eleK,metEleK] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metKform);
+0152 <span class="comment">% formulas for filling metabolites</span>
+0153 [~,eleK,metEleF] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metFill, eleK);
+0154 <span class="keyword">if</span> numel(eleK) &gt; size(metEleK,2)
+0155     metEleK = [metEleK, zeros(size(metEleK,1), numel(eleK) - size(metEleK,2))];
+0156 <span class="keyword">end</span>
+0157 eleCh = strcmp(eleK,<span class="string">'Charge'</span>);  <span class="comment">% index for charge coloumn</span>
+0158 m = size(model.S,1);  <span class="comment">% number of mets</span>
+0159 nE = numel(eleK);  <span class="comment">% number of elements</span>
+0160 mK = numel(metK);  <span class="comment">% number of known mets</span>
+0161 mU = m - mK;  <span class="comment">% number of unknown mets</span>
+0162 mF = numel(metFill);  <span class="comment">% number of filling mets</span>
+0163 metU = setdiff((1:m)',metK);  <span class="comment">% index for unknown mets</span>
+0164 nR = numel(rxnC);  <span class="comment">% number of reactions that should be mass balanced</span>
+0165 
+0166 <span class="comment">% elements connected because of metFill. They need to be optimized in the same problem.</span>
 0167 eleConnect = false(nE);
 0168 eleUnchecked = true(nE,1);
 0169 nEC = 0;
@@ -289,499 +296,496 @@ This function is called by:
 0185 eleConnect = eleConnect(:, 1:nEC);
 0186 
 0187 <span class="comment">%% main loop</span>
-0188 <span class="comment">%constraint matrix for m_ie, x^pos_je, x^neg_je: [S_unknown I_nR -I_nR]</span>
+0188 <span class="comment">% constraint matrix for m_ie, x^pos_je, x^neg_je: [S_unknown I_nR -I_nR]</span>
 0189 [row,col,entry] = find([model.S(metU, rxnC)', speye(nR), -speye(nR)]);
 0190 nCol = mU + nR*2;
-0191 <span class="comment">%chemical formulae</span>
+0191 <span class="comment">% chemical formulae</span>
 0192 [metEleU.minIncon, metEleU.minFill, metEleU.minForm] = deal(NaN(mU, nE));
-0193 <span class="comment">%infeasibility of each solve</span>
+0193 <span class="comment">% infeasibility of each solve</span>
 0194 [infeasibility,sol] = deal(repmat(struct(<span class="string">'minIncon'</span>,[],<span class="string">'minFill'</span>,[],<span class="string">'minForm'</span>,[]), nEC, 1));
 0195 [S_fill.minIncon, S_fill.minFill, S_fill.minForm] = deal(sparse(mF, nR));
-0196 <span class="comment">%bound on the total inconsistency allowed</span>
+0196 <span class="comment">% bound on the total inconsistency allowed</span>
 0197 bound = repmat(struct(<span class="string">'minIncon'</span>,[],<span class="string">'minFill'</span>,[],<span class="string">'minForm'</span>,[]), nEC, 1);
 0198 index = repmat(struct(<span class="string">'m'</span>,[],<span class="string">'xp'</span>,[],<span class="string">'xn'</span>,[],<span class="string">'Ap'</span>,[],<span class="string">'An'</span>,[]),nEC,1);
 0199 LP = repmat(struct(<span class="string">'A'</span>,[],<span class="string">'b'</span>,[],<span class="string">'lb'</span>,[],<span class="string">'ub'</span>,[],<span class="string">'c'</span>,[],<span class="string">'csense'</span>,[],<span class="string">'osense'</span>,[]), nEC, 1);
 0200 <span class="keyword">for</span> jEC = 1:nEC
 0201     <span class="comment">%% minimum inconsistency</span>
-0202     
-0203     kE = sum(eleConnect(:,jEC)); <span class="comment">%number of connected elements in the current component</span>
-0204     metFillCon = any(metEleF(:, eleConnect(:,jEC)), 2); <span class="comment">%connected mets for filling</span>
-0205     mFC = sum(metFillCon);<span class="comment">%number of connected mets for filling</span>
-0206     <span class="comment">%Matrix containing m_ie for all conected elements:</span>
-0207     <span class="comment">%[S_unknown I_nR -I_nR 0 ...                                    0 ;</span>
-0208     <span class="comment">% 0 ...              0 S_unknown I_nR -I_nR  0 ...              0 ;</span>
-0209     <span class="comment">% 0 ...                                   0  S_unknown I_nR -I_nR ]</span>
-0210     rowJ = repmat(row(:), kE, 1) + reshape(repmat(0:nR:nR*(kE-1), numel(row), 1), numel(row)*kE, 1);
-0211     colJ = repmat(col(:), kE, 1) + reshape(repmat(0:nCol:nCol*(kE-1), numel(col), 1), numel(col)*kE, 1);
-0212     entryJ = repmat(entry(:), kE, 1);
-0213     LP(jEC).A = sparse(rowJ, colJ, entryJ, nR*kE, nCol*kE);
-0214     <span class="comment">%Matrix for mets for filling (m_i,e for met i, element e, I_nR identity matrix):</span>
-0215     <span class="comment">%[m_1,1 * I_nR  | m_2,1 * I_nR  | ... | m_mFC,1 * I_nR ;</span>
-0216     <span class="comment">% m_1,2 * I_nR  | m_2,2 * I_nR  | ... | m_mFC,2 * I_nR ;</span>
-0217     <span class="comment">% ...</span>
-0218     <span class="comment">% m_1,kE * I_nR | m_2,kE * I_nR | ... | m_mFC,kE * I_nR]</span>
-0219     rowJ = repmat((1:nR*kE)', mFC, 1); 
-0220     colJ = repmat((1:nR)', kE*mFC, 1) + reshape(repmat(0:nR:nR*(mFC-1), nR*kE, 1), nR*kE*mFC, 1);
-0221     entryJ = full(metEleF(metFillCon,eleConnect(:,jEC))');
-0222     entryJ = reshape(repmat(entryJ(:)', nR, 1), nR*kE*mFC, 1);
-0223     LP(jEC).A = [LP(jEC).A, sparse(rowJ, colJ, entryJ, nR*kE, nR*mFC), -sparse(rowJ, colJ, entryJ, nR*kE, nR*mFC)];
-0224     LP(jEC).lb = zeros(size(LP(jEC).A,2),1);
-0225     [~, idCharge] = ismember(find(eleCh), find(eleConnect(:,jEC)));
-0226     <span class="keyword">if</span> idCharge &gt; 0
-0227         <span class="comment">%charges can be negative</span>
-0228         LP(jEC).lb((nCol * (idCharge - 1) + 1) : (nCol * (idCharge - 1) + mU)) = -inf;
-0229     <span class="keyword">end</span>
-0230     <span class="comment">%store the index</span>
-0231     eleJ = eleK(eleConnect(:,jEC));
-0232     <span class="keyword">for</span> jkE = 1:kE
-0233         index0 = (jkE-1)*(mU + nR*2);
-0234         index(jEC).m.(eleJ{jkE}) = (index0 + 1) : (index0 + mU);
-0235         index(jEC).xp.(eleJ{jkE}) = (index0 + mU + 1) : (index0 + mU + nR);
-0236         index(jEC).xn.(eleJ{jkE}) = (index0 + mU + nR + 1) : (index0 + mU + nR*2);
-0237     <span class="keyword">end</span>
-0238     <span class="keyword">if</span> mFC &gt; 0
-0239         metFillConName = metFill(metFillCon);
-0240         <span class="keyword">for</span> jFC = 1:mFC
-0241             index0 = kE*(mU + nR*2) + (jFC - 1) * nR;
-0242             index(jEC).Ap.(metFillConName{jFC}) = (index0 + 1) : (index0 + nR);
-0243             index(jEC).An.(metFillConName{jFC}) = (index0 + nR + 1) : (index0 + nR*2);
-0244         <span class="keyword">end</span>
-0245     <span class="keyword">end</span>
-0246     
-0247     LP(jEC).ub = inf(size(LP(jEC).A,2),1);
-0248     <span class="comment">%Objective: sum(x^pos_ie + x^neg_ie)</span>
-0249     LP(jEC).c = zeros(size(LP(jEC).A, 2), 1);
-0250     <span class="keyword">for</span> jkE = 1:kE
-0251         LP(jEC).c((nCol * (jkE - 1) + mU + 1) : (nCol * jkE)) = 1;
-0252     <span class="keyword">end</span>
-0253     <span class="comment">%RHS: -S_known' * n_known</span>
-0254     LP(jEC).b = - model.S(metK,rxnC)' * metEleK(:,eleConnect(:,jEC));
-0255     LP(jEC).b = LP(jEC).b(:);
-0256     LP(jEC).csense = char(<span class="string">'E'</span> * ones(1, nR * kE));
-0257     LP(jEC).osense = 1; <span class="comment">%minimize</span>
-0258     <span class="comment">%solve for minimum inconsistency</span>
-0259     <span class="keyword">if</span> nargin &lt; 6
-0260         sol(jEC).minIncon = solveCobraLP(LP(jEC));
-0261     <span class="keyword">else</span>
-0262         sol(jEC).minIncon = solveCobraLP(LP(jEC), varargin{:});
-0263     <span class="keyword">end</span>
-0264     <span class="keyword">if</span> isfield(sol(jEC).minIncon,<span class="string">'full'</span>) &amp;&amp; numel(sol(jEC).minIncon.full) == size(LP(jEC).A,2)
-0265         <span class="comment">%store the chemical formulae</span>
-0266         jkE = 0;
-0267         <span class="keyword">for</span> jE = 1:nE
-0268             <span class="keyword">if</span> eleConnect(jE, jEC)
-0269                 jkE = jkE + 1;
-0270                 metEleU.minIncon(:,jE) = sol(jEC).minIncon.full((nCol*(jkE - 1) + 1):(nCol*(jkE - 1) + mU));
-0271             <span class="keyword">end</span>
-0272         <span class="keyword">end</span>
-0273         S_fill.minIncon(metFillCon,:) = reshape(<span class="keyword">...</span>
-0274             sol(jEC).minIncon.full((nCol * kE + 1) : (nCol * kE + nR * mFC)) <span class="keyword">...</span>
-0275             - sol(jEC).minIncon.full((nCol * kE + nR * mFC + 1) : (nCol * kE + nR * mFC *2)), nR, mFC)';
-0276     <span class="keyword">else</span>
-0277         metEleU.minIncon(:,eleConnect(:,jEC)) = NaN;
-0278     <span class="keyword">end</span>
-0279     <span class="comment">%manually check feasibility</span>
-0280     infeas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP(jEC), sol(jEC).minIncon);
-0281     infeasibility(jEC).minIncon = infeas;
-0282     <span class="keyword">if</span> infeas &lt;= feasTol <span class="comment">%should always be feasible</span>
-0283         <span class="comment">%% minimize the stoichiometric coefficients of mets for filling</span>
-0284         <span class="keyword">for</span> jkE = 1:kE
-0285             LP(jEC).A(end + 1,:) = 0;
-0286             LP(jEC).A(<span class="keyword">end</span>, (nCol*(jkE - 1) + mU + 1):(nCol*jkE)) = 1;
-0287             LP(jEC).b(end + 1) = sum(sol(jEC).minIncon.full((nCol*(jkE - 1) + mU + 1):(nCol*jkE)));
-0288         <span class="keyword">end</span>
-0289         LP(jEC).csense((end + 1):(end + kE)) = <span class="string">'L'</span>;
-0290         <span class="comment">%rounding to avoid numerical issues on feasibility</span>
-0291         LP(jEC).b = round(LP(jEC).b, digitRounded);
-0292         <span class="comment">%reuse basis</span>
-0293         <span class="keyword">if</span> isfield(sol(jEC).minIncon, <span class="string">'basis'</span>)
-0294             LP(jEC).basis = sol(jEC).minIncon.basis;
-0295             <span class="keyword">if</span> isstruct(LP(jEC).basis) &amp;&amp; isfield(LP(jEC).basis, <span class="string">'cbasis'</span>)
-0296                 LP(jEC).basis.cbasis((end + 1) : (end + kE)) = 0;
-0297             <span class="keyword">end</span>
-0298         <span class="keyword">end</span>
-0299         <span class="comment">%inconsistency for each element</span>
-0300         bound(jEC).minIncon = LP(jEC).b((end - kE + 1) : end);
-0301         <span class="comment">%change objective to min adjustment</span>
-0302         LP(jEC).c(:) = 0;
-0303         LP(jEC).c((nCol * kE + 1) : (nCol * kE + nR * mFC * 2)) = 1;
-0304         <span class="comment">%solve, adjust tolerance if infeasible</span>
-0305         f = 1e-6;
-0306         <span class="keyword">while</span> true
-0307             <span class="keyword">if</span> nargin &lt; 6
-0308                 sol(jEC).minFill = solveCobraLP(LP(jEC));
-0309             <span class="keyword">else</span>
-0310                 sol(jEC).minFill = solveCobraLP(LP(jEC), varargin{:});
-0311             <span class="keyword">end</span>
-0312             infeas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP(jEC), sol(jEC).minFill);
-0313             <span class="keyword">if</span> infeas &lt;= feasTol || f &gt; 1e-4 + 1e-8
-0314                 <span class="keyword">break</span>
-0315             <span class="keyword">end</span>
-0316             f = f * 10;
-0317             LP(jEC).b((end - kE + 1) : end) = bound(jEC).minIncon * (1 + f);
-0318             <span class="comment">%rounding to avoid numerical issues on feasibility</span>
-0319             LP(jEC).b = round(LP(jEC).b, digitRounded);
-0320         <span class="keyword">end</span>
-0321         <span class="keyword">if</span> isfield(sol(jEC).minFill,<span class="string">'full'</span>) &amp;&amp; numel(sol(jEC).minFill.full) == size(LP(jEC).A,2)
-0322             <span class="comment">%store the chemical formulae</span>
-0323             jkE = 0;
-0324             <span class="keyword">for</span> jE = 1:nE
-0325                 <span class="keyword">if</span> eleConnect(jE, jEC)
-0326                     jkE = jkE + 1;
-0327                     metEleU.minFill(:,jE) = sol(jEC).minFill.full((nCol*(jkE - 1) + 1):(nCol*(jkE - 1) + mU));
-0328                 <span class="keyword">end</span>
-0329             <span class="keyword">end</span>
-0330             S_fill.minFill(metFillCon,:) = reshape(<span class="keyword">...</span>
-0331                 sol(jEC).minFill.full((nCol * kE + 1) : (nCol * kE + nR * mFC)) <span class="keyword">...</span>
-0332                 - sol(jEC).minFill.full((nCol * kE + nR * mFC + 1) : (nCol * kE + nR * mFC *2)), nR, mFC)';
-0333         <span class="keyword">else</span>
-0334             metEleU.minFill(:,eleConnect(:,jEC)) = NaN;
-0335         <span class="keyword">end</span>
-0336         infeasibility(jEC).minFill = infeas;
-0337         bound(jEC).minFill = LP(jEC).b((end - kE + 1) : end);
-0338         <span class="comment">%% minimal formulas</span>
-0339         <span class="keyword">if</span> infeas &lt;= feasTol
-0340             <span class="comment">%feasible solution found. Use sol.minFill to constrain</span>
-0341             solChoice = <span class="string">'minFill'</span>;
-0342         <span class="keyword">else</span>
-0343             <span class="comment">%Infeasible when minimizing stoichiometric coefficients of</span>
-0344             <span class="comment">%filling mets. Use sol.minIncon to constrain</span>
-0345             solChoice = <span class="string">'minIncon'</span>; 
-0346         <span class="keyword">end</span>
-0347         <span class="comment">%remove constraint on total inconsistency</span>
-0348         LP(jEC).A((end - kE + 1) : <span class="keyword">end</span>, :) = [];
-0349         LP(jEC).b((end - kE + 1) : end) = [];
-0350         LP(jEC).csense((end - kE + 1) : end) = <span class="string">''</span>;
-0351         <span class="keyword">if</span> isfield(LP(jEC), <span class="string">'basis'</span>) &amp;&amp; isfield(LP(jEC).basis, <span class="string">'cbasis'</span>)
-0352             LP(jEC).basis.cbasis((end - kE + 1) : end) = [];
-0353         <span class="keyword">end</span>
-0354         LP(jEC).c(:) = 0; <span class="comment">%reset objective</span>
-0355         <span class="comment">%if charge is involved, split it into m^pos, m^neg</span>
-0356         <span class="keyword">if</span> idCharge &gt; 0
-0357             LP(jEC).A = [LP(jEC).A sparse(size(LP(jEC).A,1), mU*2); sparse(1:mU, (nCol * (idCharge - 1) + 1) : (nCol * (idCharge - 1) + mU), <span class="keyword">...</span>
-0358                 ones(mU, 1), mU, size(LP(jEC).A,2)), -speye(mU), speye(mU)];
-0359             LP(jEC).b = [LP(jEC).b; zeros(mU, 1)];
-0360             LP(jEC).csense = [LP(jEC).csense char(<span class="string">'E'</span> * ones(1,mU))];
-0361             LP(jEC).lb = [LP(jEC).lb; zeros(mU*2, 1)];
-0362             LP(jEC).ub = [LP(jEC).ub; inf(mU*2, 1)];
-0363             LP(jEC).c = [LP(jEC).c; ones(mU*2, 1)];
-0364             <span class="keyword">if</span> isfield(LP(jEC), <span class="string">'basis'</span>) 
-0365                 <span class="keyword">if</span> isstruct(LP(jEC).basis)
-0366                     <span class="comment">%for gurobi</span>
-0367                     <span class="keyword">if</span> isfield(LP(jEC).basis, <span class="string">'vbasis'</span>)
-0368                         LP(jEC).basis.vbasis((end + 1) : (end + mU * 2)) = 0;
-0369                     <span class="keyword">end</span>
-0370                     <span class="keyword">if</span> isfield(LP(jEC).basis, <span class="string">'cbasis'</span>)
-0371                         LP(jEC).basis.cbasis((end + 1) : (end + mU)) = 0;
-0372                     <span class="keyword">end</span>
-0373                 <span class="keyword">else</span>
-0374                     <span class="comment">%for other solvers</span>
-0375                     <span class="keyword">if</span> numel(LP(jEC).basis) == size(LP(jEC).A, 2) - mU * 2
-0376                         LP(jEC).basis((end + 1) : (end + mU * 2)) = 0;
-0377                     <span class="keyword">end</span>
-0378                 <span class="keyword">end</span>
-0379             <span class="keyword">end</span>
-0380         <span class="keyword">end</span>
-0381         <span class="keyword">for</span> jkE = 1:kE
-0382             <span class="comment">%fix inconsistency variables</span>
-0383             ind = (nCol * (jkE - 1) + mU + 1) : (nCol * jkE);
-0384             LP(jEC).ub(ind) = sol(jEC).(solChoice).full(ind) * (1 + 1e-10);
-0385             LP(jEC).lb(ind) = sol(jEC).(solChoice).full(ind) * (1 - 1e-10);
-0386             <span class="comment">%minimize chemical formulae</span>
-0387             <span class="keyword">if</span> jkE ~= idCharge
-0388                 LP(jEC).c((nCol * (jkE - 1) + 1) : (nCol * (jkE - 1) + mU)) = 1;
-0389             <span class="keyword">end</span>
-0390         <span class="keyword">end</span>
-0391         <span class="comment">%fix stoichiometric coefficients for filling mets</span>
-0392         LP(jEC).ub((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) <span class="keyword">...</span>
-0393             = sol(jEC).(solChoice).full((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) * (1 + 1e-10);
-0394         LP(jEC).lb((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) <span class="keyword">...</span>
-0395             = sol(jEC).(solChoice).full((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) * (1 - 1e-10);
-0396         <span class="comment">%rounding to avoid numerical issues on feasibility</span>
-0397         LP(jEC).ub = round(LP(jEC).ub, digitRounded);
-0398         LP(jEC).lb = round(LP(jEC).lb, digitRounded);
-0399         <span class="comment">%solve, adjust tolerance if infeasible</span>
-0400         f = 1e-10;
-0401         <span class="keyword">while</span> true
-0402             <span class="keyword">if</span> nargin &lt; 6
-0403                 sol(jEC).minForm = solveCobraLP(LP(jEC));
-0404             <span class="keyword">else</span>
-0405                 sol(jEC).minForm = solveCobraLP(LP(jEC), varargin{:});
-0406             <span class="keyword">end</span>
-0407             infeas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP(jEC), sol(jEC).minForm);
-0408             <span class="keyword">if</span> infeas &lt;= feasTol || f &gt; 1e-5
-0409                 <span class="keyword">break</span>
-0410             <span class="keyword">end</span>
-0411             f = f * 10;
-0412             <span class="keyword">for</span> jkE = 1:kE
-0413                 <span class="comment">%relax tolerance</span>
-0414                 ind = (nCol * (jkE - 1) + mU + 1) : (nCol * jkE);
-0415                 LP(jEC).ub(ind) = sol(jEC).(solChoice).full(ind) * (1 + f);
-0416                 LP(jEC).lb(ind) = sol(jEC).(solChoice).full(ind) * (1 - f);
-0417             <span class="keyword">end</span>
-0418             LP(jEC).ub((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) <span class="keyword">...</span>
-0419                 = sol(jEC).(solChoice).full((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) * (1 + f);
-0420             LP(jEC).lb((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) <span class="keyword">...</span>
-0421                 = sol(jEC).(solChoice).full((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) * (1 - f);
-0422             <span class="comment">%rounding to avoid numerical issues on feasibility</span>
-0423             LP(jEC).ub = round(LP(jEC).ub, digitRounded);
-0424             LP(jEC).lb = round(LP(jEC).lb, digitRounded);
-0425         <span class="keyword">end</span>
-0426         <span class="keyword">if</span> isfield(sol(jEC).minForm,<span class="string">'full'</span>) &amp;&amp; numel(sol(jEC).minForm.full) == size(LP(jEC).A,2)
-0427             <span class="comment">%store the chemical formulae</span>
-0428             jkE = 0;
-0429             <span class="keyword">for</span> jE = 1:nE
-0430                 <span class="keyword">if</span> eleConnect(jE, jEC)
-0431                     jkE = jkE + 1;
-0432                     metEleU.minForm(:,jE) = sol(jEC).minForm.full((nCol*(jkE - 1) + 1):(nCol*(jkE - 1) + mU));
-0433                 <span class="keyword">end</span>
-0434             <span class="keyword">end</span>
-0435             S_fill.minForm(metFillCon,:) = reshape(<span class="keyword">...</span>
-0436                 sol(jEC).minForm.full((nCol * kE + 1) : (nCol * kE + nR * mFC)) <span class="keyword">...</span>
-0437                 - sol(jEC).minForm.full((nCol * kE + nR * mFC + 1) : (nCol * kE + nR * mFC *2)), nR, mFC)';
-0438         <span class="keyword">else</span>
-0439             metEleU.minForm(:,eleConnect(:,jEC)) = NaN;
-0440         <span class="keyword">end</span>
-0441         infeasibility(jEC).minForm = infeas;
-0442         bound(jEC).minForm = f;
-0443     <span class="keyword">else</span>
-0444         [infeasibility(jEC).minFill, infeasibility(jEC).minForm] = deal(inf);
-0445     <span class="keyword">end</span>
-0446 <span class="keyword">end</span>
-0447 <span class="comment">%% store the solution and relevant info</span>
-0448 solInfo.metUnknown = model.mets(metU);
-0449 solInfo.ele = eleK;
-0450 solInfo.eleConnect = eleConnect;
-0451 solInfo.rxns = model.rxns(rxnC);
-0452 solInfo.metEleUnknwon = metEleU;
-0453 solInfo.S_fill = S_fill;
-0454 solInfo.sol = sol;
-0455 solInfo.var = index;
-0456 solInfo.infeasibility = infeasibility;
-0457 solInfo.bound = bound;
-0458 solInfo.feasTol = feasTol;
-0459 solInfo.stat = repmat({<span class="string">'infeasible'</span>}, nEC, 1);
-0460 solInfo.stat([infeasibility.minIncon] &lt;= feasTol) = {<span class="string">'minIncon'</span>};
-0461 solInfo.stat([infeasibility.minFill] &lt;= feasTol) = {<span class="string">'minFill'</span>};
-0462 solInfo.stat([infeasibility.minForm] &lt;= feasTol) = {<span class="string">'minForm'</span>};
-0463 <span class="keyword">if</span> any(strcmp(solInfo.stat, <span class="string">'infeasible'</span>))
-0464     fprintf(<span class="string">'Critical failure: no feasible solution is found.\n'</span>)
-0465     metCompute = {};
-0466     solInfo.final = <span class="string">'infeasible'</span>;
-0467     <span class="keyword">return</span>
-0468 <span class="keyword">elseif</span> all(strcmp(solInfo.stat, <span class="string">'minForm'</span>))
-0469     solInfo.final = <span class="string">'minForm'</span>;
-0470 <span class="keyword">elseif</span> all(strcmp(solInfo.stat, <span class="string">'minFill'</span>))
-0471     solInfo.final = <span class="string">'minFill'</span>;
-0472 <span class="keyword">elseif</span> all(strcmp(solInfo.stat, <span class="string">'minIncon'</span>))
-0473     solInfo.final = <span class="string">'minIncon'</span>;
-0474 <span class="keyword">else</span>
-0475     solInfo.final = <span class="string">'mixed'</span>;
-0476 <span class="keyword">end</span>
-0477 <span class="comment">%Get the best metEle and S_fill as the solution for incorporating results from conserved moiety calculations.</span>
-0478 <span class="comment">%For each set of elements in eleConnect, choose the latest solution (minForm &gt; minFill &gt; minIncon), recorded in solInfo.stat.</span>
-0479 metEle = zeros(m, nE);
-0480 metEle(metK,:) = metEleK;
-0481 S_fill = sparse(mF, numel(model.rxns));
-0482 <span class="keyword">for</span> jEC = 1:nEC
-0483     metEle(metU,eleConnect(:,jEC)) = metEleU.(solInfo.stat{jEC})(:, eleConnect(:,jEC));
-0484     metFillCon = any(metEleF(:, eleConnect(:,jEC)), 2);
-0485     <span class="keyword">if</span> any(metFillCon)
-0486         S_fill(metFillCon, rxnC) = solInfo.S_fill.(solInfo.stat{jEC})(metFillCon, :);
-0487     <span class="keyword">end</span>
-0488 <span class="keyword">end</span>
-0489 <span class="comment">%% find conserved moieties</span>
-0490 <span class="keyword">if</span> nargin &lt; 4 || isempty(findCM) || (numel(findCM) == 1 &amp;&amp; findCM)
-0491     findCM = <span class="string">'efmtool'</span>;
-0492 <span class="keyword">end</span>
-0493 CMfound = false;
-0494 N = [];
-0495 <span class="keyword">if</span> size(findCM,1) == numel(model.mets)
-0496     <span class="comment">%input is the null space matrix / set of extreme rays</span>
-0497     N = findCM;
-0498     CMfound = true;
-0499 <span class="keyword">elseif</span> ~ischar(findCM) &amp;&amp; numel(findCM) &gt; 1
-0500     warning(<span class="string">'Input extreme ray matrix has #rows (%d) different from #mets (%d). Ignore.'</span>, size(findCM,1), numel(model.mets));
-0501     findCM = <span class="string">'efmtool'</span>;
-0502 <span class="keyword">end</span>
-0503 <span class="keyword">if</span> ~CMfound &amp;&amp; ischar(findCM) &amp;&amp; strcmpi(findCM, <span class="string">'efmtool'</span>)
-0504     <span class="comment">%use EFMtool</span>
-0505     pathEFM = which(<span class="string">'CalculateFluxModes.m'</span>);
-0506     <span class="keyword">if</span> isempty(pathEFM)
-0507         warning(<span class="string">'EFMtool not in Matlab path. Use rational basis.'</span>);
-0508         findCM = <span class="string">'null'</span>;
-0509     <span class="keyword">else</span>
-0510         dirEFM = strsplit(pathEFM,filesep);
-0511         dirEFM = strjoin(dirEFM(1:end-1),filesep);
-0512         dirCur = pwd;
-0513         cd(dirEFM);
-0514         <span class="keyword">if</span> deadCM
-0515             N = CalculateFluxModes(full(model.S'),zeros(numel(model.mets),1));
-0516             N = N.efms;
-0517         <span class="keyword">else</span>
-0518             <span class="comment">%may fail due to lack of memory if there are a lot of dead end</span>
-0519             <span class="comment">%metabolites, may add code to remove deadend mets first</span>
-0520             [~,removedMets] = removeDeadEnds(model);
-0521             metActive = true(numel(model.mets), 1);
-0522             metActive(findMetIDs(model,removedMets)) = false;
-0523             N_active = CalculateFluxModes(full(model.S(metActive,:)'),zeros(sum(metActive),1));
-0524             N = zeros(numel(model.mets), size(N_active.efms,2));
-0525             N(metActive,:) = N_active.efms;
-0526         <span class="keyword">end</span>
-0527         cd(dirCur);
-0528         CMfound = true;
-0529     <span class="keyword">end</span>
-0530 <span class="keyword">end</span>
-0531 <span class="keyword">if</span> ~CMfound &amp;&amp; ischar(findCM) &amp;&amp; strcmpi(findCM, <span class="string">'null'</span>)
-0532     <span class="comment">%matlab rational basis</span>
-0533     <span class="keyword">if</span> deadCM
-0534         N = null(full(model.S'),<span class="string">'r'</span>);
-0535     <span class="keyword">else</span>
-0536         [~,removedMets] = removeDeadEnds(model);
-0537         metActive = true(numel(model.mets), 1);
-0538         metActive(findMetIDs(model,removedMets)) = false;
-0539         N_active = null(full(model.S(metActive,:)'),<span class="string">'r'</span>);
-0540         N = zeros(numel(model.mets), size(N_active, 2));
-0541         N(metActive,:) = N_active;
-0542     <span class="keyword">end</span>
-0543     CMfound = true;
-0544 <span class="keyword">end</span>
-0545 <span class="keyword">if</span> CMfound
-0546     fprintf(<span class="string">'Conserved moieties found.\n'</span>);    
-0547     <span class="comment">%clear close-to-zero values</span>
-0548     N(abs(N) &lt; 1e-8) = 0;
-0549     N = sparse(N);
-0550     <span class="comment">%true generic conserved moieties, positive and not involving known mets</span>
-0551     Ncm = N(:,~any(N &lt; 0, 1) &amp; ~any(N(metK,:),1));
-0552     <span class="comment">%add them into formulas</span>
-0553     metEle = [metEle, Ncm];
-0554     ele = [eleK(:); cell(size(Ncm,2),1)];
-0555     j2 = 1;
-0556     <span class="keyword">for</span> j = 1:size(Ncm,2)
-0557         <span class="keyword">while</span> any(strcmp(ele(1:nE),[<span class="string">'Conserve_'</span> <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(j2)]))
-0558             j2 = j2 + 1;
-0559         <span class="keyword">end</span>
-0560         ele{nE+j} = [<span class="string">'Conserve_'</span> <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(j2)];
-0561         j2 = j2 + 1;
-0562     <span class="keyword">end</span>
-0563 <span class="keyword">else</span>
-0564     ele = eleK(:);
-0565 <span class="keyword">end</span>
-0566 
-0567 
-0568 <span class="comment">%get formulae in string</span>
-0569 model.metFormulas = <a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,metEle,10);
-0570 <span class="keyword">if</span> nameCM &gt; 0 &amp;&amp; CMfound
-0571     <span class="comment">%manually name conserved moieties</span>
-0572     ele0 = ele;
-0573     nDefault = 0;
-0574     nCM = size(Ncm,2);
-0575     eleDel = false(nE + nCM, 1);
-0576     <span class="keyword">if</span> nameCM == 1
-0577         <span class="comment">%get dead end metatbolites</span>
-0578         [~,removedMets] = removeDeadEnds(model);
-0579         metDead = findMetIDs(model,removedMets);
-0580     <span class="keyword">end</span>
-0581     <span class="keyword">for</span> j = 1:nCM
-0582         fprintf(<span class="string">'\n'</span>);
-0583         writeCell2Text([model.mets(Ncm(:,j)~=0),model.metFormulas(Ncm(:,j)~=0),<span class="keyword">...</span>
-0584             model.metNames(Ncm(:,j)~=0)]);
-0585         fprintf(<span class="string">'\n'</span>);
-0586         <span class="keyword">if</span> nameCM == 1 &amp;&amp; any(Ncm(metDead,j),1)
-0587             <span class="comment">%use the defaulted for dead end mets</span>
-0588             nDefault = nDefault + 1;
-0589             ele{nE+j} = ele0{nE + nDefault};
-0590         <span class="keyword">else</span>
-0591             cont = false;
-0592             <span class="keyword">while</span> true
-0593                 s = input([<span class="string">'Enter the formula for the conserved moiety (e.g. OHRab_cd):\n'</span>,<span class="keyword">...</span>
-0594                     <span class="string">'(hit return to use default name ''Conserve_xxx'')\n'</span>],<span class="string">'s'</span>);
-0595                 <span class="keyword">if</span> isempty(s)
-0596                     <span class="comment">%use the defaulted</span>
-0597                     nDefault = nDefault + 1;
-0598                     ele{nE+j} = ele0{nE + nDefault};
-0599                     <span class="keyword">break</span>
-0600                 <span class="keyword">end</span>
-0601                 re = regexp(s,<span class="string">'[A-Z][a-z_]*(\-?\d+\.?\d*)?'</span>,<span class="string">'match'</span>);
-0602                 <span class="keyword">if</span> strcmp(strjoin(re,<span class="string">''</span>),s)
-0603                     <span class="comment">%manual input formula, continue to checking</span>
-0604                     cont = true;
-0605                     <span class="keyword">break</span>
-0606                 <span class="keyword">end</span>
-0607             <span class="keyword">end</span>
-0608             <span class="keyword">if</span> cont
-0609                 <span class="comment">%get the matrix for the input formula</span>
-0610                 nEnew = numel(ele) - nE - nCM;
-0611                 [~, eleJ, metEleJ] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(s,ele([1:nE, (nE+nCM+1):end]));
-0612                 metEle(:,[1:nE, (nE+nCM+1):end]) <span class="keyword">...</span>
-0613                     = metEle(:,[1:nE, (nE+nCM+1):end])<span class="keyword">...</span>
-0614                         + metEle(:,nE+j) * metEleJ(1,1:(nE+nEnew));
-0615                 <span class="keyword">if</span> numel(eleJ) &gt; nE + nEnew
-0616                     <span class="comment">%there are new elements</span>
-0617                     ele = [ele(:); eleJ((numel(ele)-nCM+1):end)];
-0618                     metEle = [metEle, <span class="keyword">...</span>
-0619                         metEle(:,nE+j) * metEleJ(1,(nE+nEnew+1):end)];
-0620                 <span class="keyword">end</span>
-0621                 eleDel(nE + j) = true;
-0622             <span class="keyword">end</span>
-0623         <span class="keyword">end</span>
-0624     <span class="keyword">end</span>
-0625     <span class="comment">%del defaulted but replaced columns</span>
-0626     <span class="keyword">if</span> any(eleDel)
-0627         eleDel = find(eleDel);
-0628         ele(eleDel) = [];
-0629         metEle(:,eleDel) = [];
-0630     <span class="keyword">end</span>
-0631     <span class="comment">%1:nE              : real elements</span>
-0632     <span class="comment">%nE+1:nE+nDefault  : default generic elements (Conserve_xxx)</span>
-0633     <span class="comment">%nE+nDeafult+1:end : generic element by user's input</span>
-0634     <span class="comment">%Change if names of default generic elements are mixed up with user</span>
-0635     <span class="comment">%input</span>
-0636     j0 = 0;
-0637     <span class="keyword">for</span> j = 1:nDefault
-0638         j0 = j0 + 1;
-0639         nameJ = [<span class="string">'Conserve_'</span> <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(j0)];
-0640         <span class="keyword">while</span> any(strcmp(ele([1:nE, nE+nDefault+1:end]),nameJ))
-0641             j0 = j0 + 1;
-0642             nameJ = [<span class="string">'Conserve_'</span> <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(j0)];
-0643         <span class="keyword">end</span>
-0644         ele{nE+j} = nameJ;
-0645     <span class="keyword">end</span>
-0646 <span class="keyword">end</span>
-0647 <span class="comment">%reaction balance</span>
-0648 rxnBal = metEle' * model.S;
-0649 model.metFormulas = <a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,metEle,10);
-0650 metCompute = [model.mets(metU) model.metFormulas(metU)];
-0651 <span class="keyword">end</span>
-0652 
-0653 <a name="_sub1" href="#_subfunctions" class="code">function s = num2alpha(index,charSet)</a>
-0654 <span class="comment">%s = num2alpha(j,charSet)</span>
-0655 <span class="comment">%Given a nonzero integer j and a character set charSet, convert j into</span>
-0656 <span class="comment">%a string formed from the characters in charSet having order j.</span>
-0657 <span class="comment">%'charSet' defaulted to be '_abcdefghijklmnopqrstuvwxyz' in which '_' acts</span>
-0658 <span class="comment">%like 0 and 'z' acts like the largest digit 9 in decimal expression</span>
-0659 <span class="comment">%e.g. num2slpha(0) is '_' , num2slpha(1) is 'a', num2slpha(27^2) is 'a__'</span>
-0660 <span class="comment">%</span>
-0661 <span class="keyword">if</span> nargin &lt; 2
-0662     charSet = [<span class="string">'_'</span> char(97:122)];
-0663 <span class="keyword">end</span>
-0664 <span class="keyword">if</span> numel(index) &gt; 1
-0665     s = cell(numel(index),1);
-0666     <span class="keyword">for</span> j = 1:numel(index)
-0667         s{j} = <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(index(j),charSet);
-0668     <span class="keyword">end</span>
-0669     <span class="keyword">return</span>
-0670 <span class="keyword">end</span>
-0671 N = length(charSet);
-0672 s = <span class="string">''</span>;
-0673 k = floor(index/N);
-0674 <span class="keyword">while</span> k &gt; 0
-0675     s = [charSet(index - k*N + 1) s];
-0676     index = k;
-0677     k = floor(index/N);
-0678 <span class="keyword">end</span>
-0679 s = [charSet(index + 1) s];
-0680 <span class="keyword">end</span></pre></div>
-<hr><address>Generated on Mon 05-Jun-2017 00:25:59 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2003</address>
+0202     kE = sum(eleConnect(:,jEC));  <span class="comment">% number of connected elements in the current component</span>
+0203     metFillCon = any(metEleF(:, eleConnect(:,jEC)), 2);  <span class="comment">% connected mets for filling</span>
+0204     mFC = sum(metFillCon);  <span class="comment">% number of connected mets for filling</span>
+0205     <span class="comment">% Matrix containing m_ie for all conected elements:</span>
+0206     <span class="comment">% [S_unknown I_nR -I_nR 0 ...                                    0 ;</span>
+0207     <span class="comment">%  0 ...              0 S_unknown I_nR -I_nR  0 ...              0 ;</span>
+0208     <span class="comment">%  0 ...                                   0  S_unknown I_nR -I_nR ]</span>
+0209     rowJ = repmat(row(:), kE, 1) + reshape(repmat(0:nR:nR*(kE-1), numel(row), 1), numel(row)*kE, 1);
+0210     colJ = repmat(col(:), kE, 1) + reshape(repmat(0:nCol:nCol*(kE-1), numel(col), 1), numel(col)*kE, 1);
+0211     entryJ = repmat(entry(:), kE, 1);
+0212     LP(jEC).A = sparse(rowJ, colJ, entryJ, nR*kE, nCol*kE);
+0213     <span class="comment">% Matrix for mets for filling (m_i,e for met i, element e, I_nR identity matrix):</span>
+0214     <span class="comment">% [m_1,1 * I_nR  | m_2,1 * I_nR  | ... | m_mFC,1 * I_nR ;</span>
+0215     <span class="comment">%  m_1,2 * I_nR  | m_2,2 * I_nR  | ... | m_mFC,2 * I_nR ;</span>
+0216     <span class="comment">%  ...</span>
+0217     <span class="comment">%  m_1,kE * I_nR | m_2,kE * I_nR | ... | m_mFC,kE * I_nR]</span>
+0218     rowJ = repmat((1:nR*kE)', mFC, 1); 
+0219     colJ = repmat((1:nR)', kE*mFC, 1) + reshape(repmat(0:nR:nR*(mFC-1), nR*kE, 1), nR*kE*mFC, 1);
+0220     entryJ = full(metEleF(metFillCon,eleConnect(:,jEC))');
+0221     entryJ = reshape(repmat(entryJ(:)', nR, 1), nR*kE*mFC, 1);
+0222     LP(jEC).A = [LP(jEC).A, sparse(rowJ, colJ, entryJ, nR*kE, nR*mFC), -sparse(rowJ, colJ, entryJ, nR*kE, nR*mFC)];
+0223     LP(jEC).lb = zeros(size(LP(jEC).A,2),1);
+0224     [~, idCharge] = ismember(find(eleCh), find(eleConnect(:,jEC)));
+0225     <span class="keyword">if</span> idCharge &gt; 0
+0226         <span class="comment">% charges can be negative</span>
+0227         LP(jEC).lb((nCol * (idCharge - 1) + 1) : (nCol * (idCharge - 1) + mU)) = -inf;
+0228     <span class="keyword">end</span>
+0229     <span class="comment">% store the index</span>
+0230     eleJ = eleK(eleConnect(:,jEC));
+0231     <span class="keyword">for</span> jkE = 1:kE
+0232         index0 = (jkE-1)*(mU + nR*2);
+0233         index(jEC).m.(eleJ{jkE}) = (index0 + 1) : (index0 + mU);
+0234         index(jEC).xp.(eleJ{jkE}) = (index0 + mU + 1) : (index0 + mU + nR);
+0235         index(jEC).xn.(eleJ{jkE}) = (index0 + mU + nR + 1) : (index0 + mU + nR*2);
+0236     <span class="keyword">end</span>
+0237     <span class="keyword">if</span> mFC &gt; 0
+0238         metFillConName = metFill(metFillCon);
+0239         <span class="keyword">for</span> jFC = 1:mFC
+0240             index0 = kE*(mU + nR*2) + (jFC - 1) * nR;
+0241             index(jEC).Ap.(metFillConName{jFC}) = (index0 + 1) : (index0 + nR);
+0242             index(jEC).An.(metFillConName{jFC}) = (index0 + nR + 1) : (index0 + nR*2);
+0243         <span class="keyword">end</span>
+0244     <span class="keyword">end</span>
+0245     
+0246     LP(jEC).ub = inf(size(LP(jEC).A,2),1);
+0247     <span class="comment">% Objective: sum(x^pos_ie + x^neg_ie)</span>
+0248     LP(jEC).c = zeros(size(LP(jEC).A, 2), 1);
+0249     <span class="keyword">for</span> jkE = 1:kE
+0250         LP(jEC).c((nCol * (jkE - 1) + mU + 1) : (nCol * jkE)) = 1;
+0251     <span class="keyword">end</span>
+0252     <span class="comment">% RHS: -S_known' * n_known</span>
+0253     LP(jEC).b = - model.S(metK,rxnC)' * metEleK(:,eleConnect(:,jEC));
+0254     LP(jEC).b = LP(jEC).b(:);
+0255     LP(jEC).csense = char(<span class="string">'E'</span> * ones(1, nR * kE));
+0256     LP(jEC).osense = 1;  <span class="comment">% minimize</span>
+0257     <span class="comment">% solve for minimum inconsistency</span>
+0258     <span class="keyword">if</span> nargin &lt; 6
+0259         sol(jEC).minIncon = solveCobraLP(LP(jEC));
+0260     <span class="keyword">else</span>
+0261         sol(jEC).minIncon = solveCobraLP(LP(jEC), varargin{:});
+0262     <span class="keyword">end</span>
+0263     <span class="keyword">if</span> isfield(sol(jEC).minIncon,<span class="string">'full'</span>) &amp;&amp; numel(sol(jEC).minIncon.full) == size(LP(jEC).A,2)
+0264         <span class="comment">% store the chemical formulae</span>
+0265         jkE = 0;
+0266         <span class="keyword">for</span> jE = 1:nE
+0267             <span class="keyword">if</span> eleConnect(jE, jEC)
+0268                 jkE = jkE + 1;
+0269                 metEleU.minIncon(:,jE) = sol(jEC).minIncon.full((nCol*(jkE - 1) + 1):(nCol*(jkE - 1) + mU));
+0270             <span class="keyword">end</span>
+0271         <span class="keyword">end</span>
+0272         S_fill.minIncon(metFillCon,:) = reshape(<span class="keyword">...</span>
+0273             sol(jEC).minIncon.full((nCol * kE + 1) : (nCol * kE + nR * mFC)) <span class="keyword">...</span>
+0274             - sol(jEC).minIncon.full((nCol * kE + nR * mFC + 1) : (nCol * kE + nR * mFC *2)), nR, mFC)';
+0275     <span class="keyword">else</span>
+0276         metEleU.minIncon(:,eleConnect(:,jEC)) = NaN;
+0277     <span class="keyword">end</span>
+0278     <span class="comment">% manually check feasibility</span>
+0279     infeas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP(jEC), sol(jEC).minIncon);
+0280     infeasibility(jEC).minIncon = infeas;
+0281     <span class="keyword">if</span> infeas &lt;= feasTol  <span class="comment">% should always be feasible</span>
+0282         <span class="comment">%% minimize the stoichiometric coefficients of mets for filling</span>
+0283         <span class="keyword">for</span> jkE = 1:kE
+0284             LP(jEC).A(end + 1,:) = 0;
+0285             LP(jEC).A(<span class="keyword">end</span>, (nCol*(jkE - 1) + mU + 1):(nCol*jkE)) = 1;
+0286             LP(jEC).b(end + 1) = sum(sol(jEC).minIncon.full((nCol*(jkE - 1) + mU + 1):(nCol*jkE)));
+0287         <span class="keyword">end</span>
+0288         LP(jEC).csense((end + 1):(end + kE)) = <span class="string">'L'</span>;
+0289         <span class="comment">% rounding to avoid numerical issues on feasibility</span>
+0290         LP(jEC).b = round(LP(jEC).b, digitRounded);
+0291         <span class="comment">% reuse basis</span>
+0292         <span class="keyword">if</span> isfield(sol(jEC).minIncon, <span class="string">'basis'</span>)
+0293             LP(jEC).basis = sol(jEC).minIncon.basis;
+0294             <span class="keyword">if</span> isstruct(LP(jEC).basis) &amp;&amp; isfield(LP(jEC).basis, <span class="string">'cbasis'</span>)
+0295                 LP(jEC).basis.cbasis((end + 1) : (end + kE)) = 0;
+0296             <span class="keyword">end</span>
+0297         <span class="keyword">end</span>
+0298         <span class="comment">% inconsistency for each element</span>
+0299         bound(jEC).minIncon = LP(jEC).b((end - kE + 1) : end);
+0300         <span class="comment">% change objective to min adjustment</span>
+0301         LP(jEC).c(:) = 0;
+0302         LP(jEC).c((nCol * kE + 1) : (nCol * kE + nR * mFC * 2)) = 1;
+0303         <span class="comment">% solve, adjust tolerance if infeasible</span>
+0304         f = 1e-6;
+0305         <span class="keyword">while</span> true
+0306             <span class="keyword">if</span> nargin &lt; 6
+0307                 sol(jEC).minFill = solveCobraLP(LP(jEC));
+0308             <span class="keyword">else</span>
+0309                 sol(jEC).minFill = solveCobraLP(LP(jEC), varargin{:});
+0310             <span class="keyword">end</span>
+0311             infeas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP(jEC), sol(jEC).minFill);
+0312             <span class="keyword">if</span> infeas &lt;= feasTol || f &gt; 1e-4 + 1e-8
+0313                 <span class="keyword">break</span>
+0314             <span class="keyword">end</span>
+0315             f = f * 10;
+0316             LP(jEC).b((end - kE + 1) : end) = bound(jEC).minIncon * (1 + f);
+0317             <span class="comment">% rounding to avoid numerical issues on feasibility</span>
+0318             LP(jEC).b = round(LP(jEC).b, digitRounded);
+0319         <span class="keyword">end</span>
+0320         <span class="keyword">if</span> isfield(sol(jEC).minFill,<span class="string">'full'</span>) &amp;&amp; numel(sol(jEC).minFill.full) == size(LP(jEC).A,2)
+0321             <span class="comment">% store the chemical formulae</span>
+0322             jkE = 0;
+0323             <span class="keyword">for</span> jE = 1:nE
+0324                 <span class="keyword">if</span> eleConnect(jE, jEC)
+0325                     jkE = jkE + 1;
+0326                     metEleU.minFill(:,jE) = sol(jEC).minFill.full((nCol*(jkE - 1) + 1):(nCol*(jkE - 1) + mU));
+0327                 <span class="keyword">end</span>
+0328             <span class="keyword">end</span>
+0329             S_fill.minFill(metFillCon,:) = reshape(<span class="keyword">...</span>
+0330                 sol(jEC).minFill.full((nCol * kE + 1) : (nCol * kE + nR * mFC)) <span class="keyword">...</span>
+0331                 - sol(jEC).minFill.full((nCol * kE + nR * mFC + 1) : (nCol * kE + nR * mFC *2)), nR, mFC)';
+0332         <span class="keyword">else</span>
+0333             metEleU.minFill(:,eleConnect(:,jEC)) = NaN;
+0334         <span class="keyword">end</span>
+0335         infeasibility(jEC).minFill = infeas;
+0336         bound(jEC).minFill = LP(jEC).b((end - kE + 1) : end);
+0337         <span class="comment">%% minimal formulas</span>
+0338         <span class="keyword">if</span> infeas &lt;= feasTol
+0339             <span class="comment">% feasible solution found. Use sol.minFill to constrain</span>
+0340             solChoice = <span class="string">'minFill'</span>;
+0341         <span class="keyword">else</span>
+0342             <span class="comment">% infeasible when minimizing stoichiometric coefficients of</span>
+0343             <span class="comment">% filling mets. Use sol.minIncon to constrain</span>
+0344             solChoice = <span class="string">'minIncon'</span>; 
+0345         <span class="keyword">end</span>
+0346         <span class="comment">% remove constraint on total inconsistency</span>
+0347         LP(jEC).A((end - kE + 1) : <span class="keyword">end</span>, :) = [];
+0348         LP(jEC).b((end - kE + 1) : end) = [];
+0349         LP(jEC).csense((end - kE + 1) : end) = <span class="string">''</span>;
+0350         <span class="keyword">if</span> isfield(LP(jEC), <span class="string">'basis'</span>) &amp;&amp; isfield(LP(jEC).basis, <span class="string">'cbasis'</span>)
+0351             LP(jEC).basis.cbasis((end - kE + 1) : end) = [];
+0352         <span class="keyword">end</span>
+0353         LP(jEC).c(:) = 0;  <span class="comment">% reset objective</span>
+0354         <span class="comment">% if charge is involved, split it into m^pos, m^neg</span>
+0355         <span class="keyword">if</span> idCharge &gt; 0
+0356             LP(jEC).A = [LP(jEC).A sparse(size(LP(jEC).A,1), mU*2); sparse(1:mU, (nCol * (idCharge - 1) + 1) : (nCol * (idCharge - 1) + mU), <span class="keyword">...</span>
+0357                 ones(mU, 1), mU, size(LP(jEC).A,2)), -speye(mU), speye(mU)];
+0358             LP(jEC).b = [LP(jEC).b; zeros(mU, 1)];
+0359             LP(jEC).csense = [LP(jEC).csense char(<span class="string">'E'</span> * ones(1,mU))];
+0360             LP(jEC).lb = [LP(jEC).lb; zeros(mU*2, 1)];
+0361             LP(jEC).ub = [LP(jEC).ub; inf(mU*2, 1)];
+0362             LP(jEC).c = [LP(jEC).c; ones(mU*2, 1)];
+0363             <span class="keyword">if</span> isfield(LP(jEC), <span class="string">'basis'</span>) 
+0364                 <span class="keyword">if</span> isstruct(LP(jEC).basis)
+0365                     <span class="comment">% for gurobi</span>
+0366                     <span class="keyword">if</span> isfield(LP(jEC).basis, <span class="string">'vbasis'</span>)
+0367                         LP(jEC).basis.vbasis((end + 1) : (end + mU * 2)) = 0;
+0368                     <span class="keyword">end</span>
+0369                     <span class="keyword">if</span> isfield(LP(jEC).basis, <span class="string">'cbasis'</span>)
+0370                         LP(jEC).basis.cbasis((end + 1) : (end + mU)) = 0;
+0371                     <span class="keyword">end</span>
+0372                 <span class="keyword">else</span>
+0373                     <span class="comment">% for other solvers</span>
+0374                     <span class="keyword">if</span> numel(LP(jEC).basis) == size(LP(jEC).A, 2) - mU * 2
+0375                         LP(jEC).basis((end + 1) : (end + mU * 2)) = 0;
+0376                     <span class="keyword">end</span>
+0377                 <span class="keyword">end</span>
+0378             <span class="keyword">end</span>
+0379         <span class="keyword">end</span>
+0380         <span class="keyword">for</span> jkE = 1:kE
+0381             <span class="comment">% fix inconsistency variables</span>
+0382             ind = (nCol * (jkE - 1) + mU + 1) : (nCol * jkE);
+0383             LP(jEC).ub(ind) = sol(jEC).(solChoice).full(ind) * (1 + 1e-10);
+0384             LP(jEC).lb(ind) = sol(jEC).(solChoice).full(ind) * (1 - 1e-10);
+0385             <span class="comment">% minimize chemical formulae</span>
+0386             <span class="keyword">if</span> jkE ~= idCharge
+0387                 LP(jEC).c((nCol * (jkE - 1) + 1) : (nCol * (jkE - 1) + mU)) = 1;
+0388             <span class="keyword">end</span>
+0389         <span class="keyword">end</span>
+0390         <span class="comment">% fix stoichiometric coefficients for filling mets</span>
+0391         LP(jEC).ub((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) <span class="keyword">...</span>
+0392             = sol(jEC).(solChoice).full((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) * (1 + 1e-10);
+0393         LP(jEC).lb((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) <span class="keyword">...</span>
+0394             = sol(jEC).(solChoice).full((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) * (1 - 1e-10);
+0395         <span class="comment">% rounding to avoid numerical issues on feasibility</span>
+0396         LP(jEC).ub = round(LP(jEC).ub, digitRounded);
+0397         LP(jEC).lb = round(LP(jEC).lb, digitRounded);
+0398         <span class="comment">% solve, adjust tolerance if infeasible</span>
+0399         f = 1e-10;
+0400         <span class="keyword">while</span> true
+0401             <span class="keyword">if</span> nargin &lt; 6
+0402                 sol(jEC).minForm = solveCobraLP(LP(jEC));
+0403             <span class="keyword">else</span>
+0404                 sol(jEC).minForm = solveCobraLP(LP(jEC), varargin{:});
+0405             <span class="keyword">end</span>
+0406             infeas = <a href="../MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html" class="code" title="function varargout = checkSolFeas(LP, sol, maxInfeas, tol, internal)">checkSolFeas</a>(LP(jEC), sol(jEC).minForm);
+0407             <span class="keyword">if</span> infeas &lt;= feasTol || f &gt; 1e-5
+0408                 <span class="keyword">break</span>
+0409             <span class="keyword">end</span>
+0410             f = f * 10;
+0411             <span class="keyword">for</span> jkE = 1:kE
+0412                 <span class="comment">% relax tolerance</span>
+0413                 ind = (nCol * (jkE - 1) + mU + 1) : (nCol * jkE);
+0414                 LP(jEC).ub(ind) = sol(jEC).(solChoice).full(ind) * (1 + f);
+0415                 LP(jEC).lb(ind) = sol(jEC).(solChoice).full(ind) * (1 - f);
+0416             <span class="keyword">end</span>
+0417             LP(jEC).ub((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) <span class="keyword">...</span>
+0418                 = sol(jEC).(solChoice).full((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) * (1 + f);
+0419             LP(jEC).lb((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) <span class="keyword">...</span>
+0420                 = sol(jEC).(solChoice).full((nCol * kE + 1) : (nCol * kE + nR*2*mFC)) * (1 - f);
+0421             <span class="comment">% rounding to avoid numerical issues on feasibility</span>
+0422             LP(jEC).ub = round(LP(jEC).ub, digitRounded);
+0423             LP(jEC).lb = round(LP(jEC).lb, digitRounded);
+0424         <span class="keyword">end</span>
+0425         <span class="keyword">if</span> isfield(sol(jEC).minForm,<span class="string">'full'</span>) &amp;&amp; numel(sol(jEC).minForm.full) == size(LP(jEC).A,2)
+0426             <span class="comment">% store the chemical formulae</span>
+0427             jkE = 0;
+0428             <span class="keyword">for</span> jE = 1:nE
+0429                 <span class="keyword">if</span> eleConnect(jE, jEC)
+0430                     jkE = jkE + 1;
+0431                     metEleU.minForm(:,jE) = sol(jEC).minForm.full((nCol*(jkE - 1) + 1):(nCol*(jkE - 1) + mU));
+0432                 <span class="keyword">end</span>
+0433             <span class="keyword">end</span>
+0434             S_fill.minForm(metFillCon,:) = reshape(<span class="keyword">...</span>
+0435                 sol(jEC).minForm.full((nCol * kE + 1) : (nCol * kE + nR * mFC)) <span class="keyword">...</span>
+0436                 - sol(jEC).minForm.full((nCol * kE + nR * mFC + 1) : (nCol * kE + nR * mFC *2)), nR, mFC)';
+0437         <span class="keyword">else</span>
+0438             metEleU.minForm(:,eleConnect(:,jEC)) = NaN;
+0439         <span class="keyword">end</span>
+0440         infeasibility(jEC).minForm = infeas;
+0441         bound(jEC).minForm = f;
+0442     <span class="keyword">else</span>
+0443         [infeasibility(jEC).minFill, infeasibility(jEC).minForm] = deal(inf);
+0444     <span class="keyword">end</span>
+0445 <span class="keyword">end</span>
+0446 <span class="comment">%% store the solution and relevant info</span>
+0447 solInfo.metUnknown = model.mets(metU);
+0448 solInfo.ele = eleK;
+0449 solInfo.eleConnect = eleConnect;
+0450 solInfo.rxns = model.rxns(rxnC);
+0451 solInfo.metEleUnknwon = metEleU;
+0452 solInfo.S_fill = S_fill;
+0453 solInfo.sol = sol;
+0454 solInfo.var = index;
+0455 solInfo.infeasibility = infeasibility;
+0456 solInfo.bound = bound;
+0457 solInfo.feasTol = feasTol;
+0458 solInfo.stat = repmat({<span class="string">'infeasible'</span>}, nEC, 1);
+0459 solInfo.stat([infeasibility.minIncon] &lt;= feasTol) = {<span class="string">'minIncon'</span>};
+0460 solInfo.stat([infeasibility.minFill] &lt;= feasTol) = {<span class="string">'minFill'</span>};
+0461 solInfo.stat([infeasibility.minForm] &lt;= feasTol) = {<span class="string">'minForm'</span>};
+0462 <span class="keyword">if</span> any(strcmp(solInfo.stat, <span class="string">'infeasible'</span>))
+0463     fprintf(<span class="string">'Critical failure: no feasible solution is found.\n'</span>)
+0464     metCompute = {};
+0465     solInfo.final = <span class="string">'infeasible'</span>;
+0466     <span class="keyword">return</span>
+0467 <span class="keyword">elseif</span> all(strcmp(solInfo.stat, <span class="string">'minForm'</span>))
+0468     solInfo.final = <span class="string">'minForm'</span>;
+0469 <span class="keyword">elseif</span> all(strcmp(solInfo.stat, <span class="string">'minFill'</span>))
+0470     solInfo.final = <span class="string">'minFill'</span>;
+0471 <span class="keyword">elseif</span> all(strcmp(solInfo.stat, <span class="string">'minIncon'</span>))
+0472     solInfo.final = <span class="string">'minIncon'</span>;
+0473 <span class="keyword">else</span>
+0474     solInfo.final = <span class="string">'mixed'</span>;
+0475 <span class="keyword">end</span>
+0476 <span class="comment">% Get the best metEle and S_fill as the solution for incorporating results from conserved moiety calculations.</span>
+0477 <span class="comment">% For each set of elements in eleConnect, choose the latest solution (minForm &gt; minFill &gt; minIncon), recorded in solInfo.stat.</span>
+0478 metEle = zeros(m, nE);
+0479 metEle(metK,:) = metEleK;
+0480 S_fill = sparse(mF, numel(model.rxns));
+0481 <span class="keyword">for</span> jEC = 1:nEC
+0482     metEle(metU,eleConnect(:,jEC)) = metEleU.(solInfo.stat{jEC})(:, eleConnect(:,jEC));
+0483     metFillCon = any(metEleF(:, eleConnect(:,jEC)), 2);
+0484     <span class="keyword">if</span> any(metFillCon)
+0485         S_fill(metFillCon, rxnC) = solInfo.S_fill.(solInfo.stat{jEC})(metFillCon, :);
+0486     <span class="keyword">end</span>
+0487 <span class="keyword">end</span>
+0488 <span class="comment">%% find conserved moieties</span>
+0489 <span class="keyword">if</span> nargin &lt; 4 || isempty(findCM) || (numel(findCM) == 1 &amp;&amp; findCM)
+0490     findCM = <span class="string">'efmtool'</span>;
+0491 <span class="keyword">end</span>
+0492 CMfound = false;
+0493 N = [];
+0494 <span class="keyword">if</span> size(findCM,1) == numel(model.mets)
+0495     <span class="comment">% input is the null space matrix / set of extreme rays</span>
+0496     N = findCM;
+0497     CMfound = true;
+0498 <span class="keyword">elseif</span> ~ischar(findCM) &amp;&amp; numel(findCM) &gt; 1
+0499     warning(<span class="string">'Input extreme ray matrix has #rows (%d) different from #mets (%d). Ignore.'</span>, size(findCM,1), numel(model.mets));
+0500     findCM = <span class="string">'efmtool'</span>;
+0501 <span class="keyword">end</span>
+0502 <span class="keyword">if</span> ~CMfound &amp;&amp; ischar(findCM) &amp;&amp; strcmpi(findCM, <span class="string">'efmtool'</span>)
+0503     <span class="comment">% use EFMtool</span>
+0504     pathEFM = which(<span class="string">'CalculateFluxModes.m'</span>);
+0505     <span class="keyword">if</span> isempty(pathEFM)
+0506         warning(<span class="string">'EFMtool not in Matlab path. Use rational basis.'</span>);
+0507         findCM = <span class="string">'null'</span>;
+0508     <span class="keyword">else</span>
+0509         dirEFM = strsplit(pathEFM,filesep);
+0510         dirEFM = strjoin(dirEFM(1:end-1),filesep);
+0511         dirCur = pwd;
+0512         cd(dirEFM);
+0513         <span class="keyword">if</span> deadCM
+0514             <span class="comment">% may fail due to lack of memory if there are a lot of dead end</span>
+0515             <span class="comment">% metabolites, set deadCM = false to exclude them</span>
+0516             N = CalculateFluxModes(full(model.S'),zeros(numel(model.mets),1));
+0517             N = N.efms;
+0518         <span class="keyword">else</span>
+0519             [~,removedMets] = removeDeadEnds(model);
+0520             metActive = true(numel(model.mets), 1);
+0521             metActive(findMetIDs(model,removedMets)) = false;
+0522             N_active = CalculateFluxModes(full(model.S(metActive,:)'),zeros(sum(metActive),1));
+0523             N = zeros(numel(model.mets), size(N_active.efms,2));
+0524             N(metActive,:) = N_active.efms;
+0525         <span class="keyword">end</span>
+0526         cd(dirCur);
+0527         CMfound = true;
+0528     <span class="keyword">end</span>
+0529 <span class="keyword">end</span>
+0530 <span class="keyword">if</span> ~CMfound &amp;&amp; ischar(findCM) &amp;&amp; strcmpi(findCM, <span class="string">'null'</span>)
+0531     <span class="comment">% matlab rational basis</span>
+0532     <span class="keyword">if</span> deadCM
+0533         N = null(full(model.S'),<span class="string">'r'</span>);
+0534     <span class="keyword">else</span>
+0535         [~,removedMets] = removeDeadEnds(model);
+0536         metActive = true(numel(model.mets), 1);
+0537         metActive(findMetIDs(model,removedMets)) = false;
+0538         N_active = null(full(model.S(metActive,:)'),<span class="string">'r'</span>);
+0539         N = zeros(numel(model.mets), size(N_active, 2));
+0540         N(metActive,:) = N_active;
+0541     <span class="keyword">end</span>
+0542     CMfound = true;
+0543 <span class="keyword">end</span>
+0544 <span class="keyword">if</span> CMfound
+0545     fprintf(<span class="string">'Conserved moieties found.\n'</span>);    
+0546     <span class="comment">% clear close-to-zero values</span>
+0547     N(abs(N) &lt; 1e-8) = 0;
+0548     N = sparse(N);
+0549     <span class="comment">% true generic conserved moieties, positive and not involving known mets</span>
+0550     Ncm = N(:,~any(N &lt; 0, 1) &amp; ~any(N(metK,:),1));
+0551     <span class="comment">% add them into formulas</span>
+0552     metEle = [metEle, Ncm];
+0553     ele = [eleK(:); cell(size(Ncm,2),1)];
+0554     j2 = 1;
+0555     <span class="keyword">for</span> j = 1:size(Ncm,2)
+0556         <span class="keyword">while</span> any(strcmp(ele(1:nE),[<span class="string">'Conserve_'</span> <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(j2)]))
+0557             j2 = j2 + 1;
+0558         <span class="keyword">end</span>
+0559         ele{nE+j} = [<span class="string">'Conserve_'</span> <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(j2)];
+0560         j2 = j2 + 1;
+0561     <span class="keyword">end</span>
+0562 <span class="keyword">else</span>
+0563     ele = eleK(:);
+0564 <span class="keyword">end</span>
+0565 
+0566 <span class="comment">% get formulae in string</span>
+0567 model.metFormulas = <a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,metEle,10);
+0568 <span class="keyword">if</span> nameCM &gt; 0 &amp;&amp; CMfound
+0569     <span class="comment">% manually name conserved moieties</span>
+0570     ele0 = ele;
+0571     nDefault = 0;
+0572     nCM = size(Ncm,2);
+0573     eleDel = false(nE + nCM, 1);
+0574     <span class="keyword">if</span> nameCM == 1
+0575         <span class="comment">% get dead end metatbolites</span>
+0576         [~,removedMets] = removeDeadEnds(model);
+0577         metDead = findMetIDs(model,removedMets);
+0578     <span class="keyword">end</span>
+0579     <span class="keyword">for</span> j = 1:nCM
+0580         fprintf(<span class="string">'\n'</span>);
+0581         writeCell2Text([model.mets(Ncm(:,j)~=0),model.metFormulas(Ncm(:,j)~=0),<span class="keyword">...</span>
+0582             model.metNames(Ncm(:,j)~=0)]);
+0583         fprintf(<span class="string">'\n'</span>);
+0584         <span class="keyword">if</span> nameCM == 1 &amp;&amp; any(Ncm(metDead,j),1)
+0585             <span class="comment">% use the defaulted for dead end mets</span>
+0586             nDefault = nDefault + 1;
+0587             ele{nE+j} = ele0{nE + nDefault};
+0588         <span class="keyword">else</span>
+0589             cont = false;
+0590             <span class="keyword">while</span> true
+0591                 s = input([<span class="string">'Enter the formula for the conserved moiety (e.g. OHRab_cd):\n'</span>,<span class="keyword">...</span>
+0592                     <span class="string">'(hit return to use default name ''Conserve_xxx'')\n'</span>],<span class="string">'s'</span>);
+0593                 <span class="keyword">if</span> isempty(s)
+0594                     <span class="comment">% use the defaulted</span>
+0595                     nDefault = nDefault + 1;
+0596                     ele{nE+j} = ele0{nE + nDefault};
+0597                     <span class="keyword">break</span>
+0598                 <span class="keyword">end</span>
+0599                 re = regexp(s,<span class="string">'[A-Z][a-z_]*(\-?\d+\.?\d*)?'</span>,<span class="string">'match'</span>);
+0600                 <span class="keyword">if</span> strcmp(strjoin(re,<span class="string">''</span>),s)
+0601                     <span class="comment">% manual input formula, continue to checking</span>
+0602                     cont = true;
+0603                     <span class="keyword">break</span>
+0604                 <span class="keyword">end</span>
+0605             <span class="keyword">end</span>
+0606             <span class="keyword">if</span> cont
+0607                 <span class="comment">% get the matrix for the input formula</span>
+0608                 nEnew = numel(ele) - nE - nCM;
+0609                 [~, eleJ, metEleJ] = <a href="../MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(s,ele([1:nE, (nE+nCM+1):end]));
+0610                 metEle(:,[1:nE, (nE+nCM+1):end]) <span class="keyword">...</span>
+0611                     = metEle(:,[1:nE, (nE+nCM+1):end])<span class="keyword">...</span>
+0612                         + metEle(:,nE+j) * metEleJ(1,1:(nE+nEnew));
+0613                 <span class="keyword">if</span> numel(eleJ) &gt; nE + nEnew
+0614                     <span class="comment">% there are new elements</span>
+0615                     ele = [ele(:); eleJ((numel(ele)-nCM+1):end)];
+0616                     metEle = [metEle, <span class="keyword">...</span>
+0617                         metEle(:,nE+j) * metEleJ(1,(nE+nEnew+1):end)];
+0618                 <span class="keyword">end</span>
+0619                 eleDel(nE + j) = true;
+0620             <span class="keyword">end</span>
+0621         <span class="keyword">end</span>
+0622     <span class="keyword">end</span>
+0623     <span class="comment">% del defaulted but replaced columns</span>
+0624     <span class="keyword">if</span> any(eleDel)
+0625         eleDel = find(eleDel);
+0626         ele(eleDel) = [];
+0627         metEle(:,eleDel) = [];
+0628     <span class="keyword">end</span>
+0629     <span class="comment">% 1:nE                    :    real elements</span>
+0630     <span class="comment">% nE + 1 : nE + nDefault  :    default generic elements (Conserve_xxx)</span>
+0631     <span class="comment">% nE + nDeafult + 1 : end :    generic element by user's input</span>
+0632     <span class="comment">% Change if names of default generic elements are mixed up with user input</span>
+0633     j0 = 0;
+0634     <span class="keyword">for</span> j = 1:nDefault
+0635         j0 = j0 + 1;
+0636         nameJ = [<span class="string">'Conserve_'</span> <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(j0)];
+0637         <span class="keyword">while</span> any(strcmp(ele([1:nE, nE+nDefault+1:end]),nameJ))
+0638             j0 = j0 + 1;
+0639             nameJ = [<span class="string">'Conserve_'</span> <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(j0)];
+0640         <span class="keyword">end</span>
+0641         ele{nE+j} = nameJ;
+0642     <span class="keyword">end</span>
+0643 <span class="keyword">end</span>
+0644 <span class="comment">% reaction balance</span>
+0645 rxnBal = metEle' * model.S;
+0646 model.metFormulas = <a href="../MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html" class="code" title="function metForm = convertMatrixFormulas(element, metEle, dMax)">convertMatrixFormulas</a>(ele,metEle,10);
+0647 metCompute = [model.mets(metU) model.metFormulas(metU)];
+0648 <span class="keyword">end</span>
+0649 
+0650 <a name="_sub1" href="#_subfunctions" class="code">function s = num2alpha(index,charSet)</a>
+0651 <span class="comment">% s = num2alpha(j, charSet)</span>
+0652 <span class="comment">% Given a nonzero integer j and a character set charSet, convert j into</span>
+0653 <span class="comment">% a string formed from the characters in charSet having order j.</span>
+0654 <span class="comment">% 'charSet' defaulted to be '_abcdefghijklmnopqrstuvwxyz' in which '_' acts</span>
+0655 <span class="comment">% like 0 and 'z' acts like the largest digit 9 in decimal expression</span>
+0656 <span class="comment">% e.g. num2slpha(0) is '_' , num2slpha(1) is 'a', num2slpha(27^2) is 'a__'</span>
+0657 
+0658 <span class="keyword">if</span> nargin &lt; 2
+0659     charSet = [<span class="string">'_'</span> char(97:122)];
+0660 <span class="keyword">end</span>
+0661 <span class="keyword">if</span> numel(index) &gt; 1
+0662     s = cell(numel(index),1);
+0663     <span class="keyword">for</span> j = 1:numel(index)
+0664         s{j} = <a href="#_sub1" class="code" title="subfunction s = num2alpha(index,charSet)">num2alpha</a>(index(j),charSet);
+0665     <span class="keyword">end</span>
+0666     <span class="keyword">return</span>
+0667 <span class="keyword">end</span>
+0668 N = length(charSet);
+0669 s = <span class="string">''</span>;
+0670 k = floor(index/N);
+0671 <span class="keyword">while</span> k &gt; 0
+0672     s = [charSet(index - k*N + 1) s];
+0673     index = k;
+0674     k = floor(index/N);
+0675 <span class="keyword">end</span>
+0676 s = [charSet(index + 1) s];
+0677 <span class="keyword">end</span></pre></div>
+<hr><address>Generated on Tue 08-Aug-2017 16:33:39 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2005</address>
 </body>
 </html>

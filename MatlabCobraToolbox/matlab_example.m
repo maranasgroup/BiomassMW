@@ -1,4 +1,6 @@
-%% use E. coli iJO1366 model
+% Example script on applying the method to the E. coli iJO1366 model
+
+%% Get and load the model
 if exist('iJO1366.mat', 'file')
     fprintf(' iJO1366.mat found.\n');
 else

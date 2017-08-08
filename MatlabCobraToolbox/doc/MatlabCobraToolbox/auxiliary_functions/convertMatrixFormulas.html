@@ -6,9 +6,12 @@
   <meta name="keywords" content="convertMatrixFormulas">
   <meta name="description" content="Convert the matrix form of the chemical formulae into string form">
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-  <meta name="generator" content="m2html &copy; 2003 Guillaume Flandin">
+  <meta name="generator" content="m2html &copy; 2005 Guillaume Flandin">
   <meta name="robots" content="index, follow">
   <link type="text/css" rel="stylesheet" href="../../m2html.css">
+  <script type="text/javascript">
+    if (top.frames.length == 0) { top.location = "../../index.html"; };
+  </script>
 </head>
 <body>
 <a name="_top"></a>
@@ -39,8 +42,9 @@ This function calls:
 </ul>
 This function is called by:
 <ul style="list-style-image:url(../../matlabicon.gif)">
-<li><a href="../../MatlabCobraToolbox/computeMetFormulae.html" class="code" title="function [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFormulae(model,metKnown,rxns,metFill,findCM,nameCM,varargin)">computeMetFormulae</a>	Compute the chemical formulas of the unknown metabolites using a set of metabolites with known formulae and a set of reactions.</li><li><a href="../../MatlabCobraToolbox/computeMetMWrange.html" class="code" title="function [metMWrange,metForm,ele,metEle,rxnBal,infeasibility,inconUB,sol,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,varargin)">computeMetMWrange</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li></ul>
+<li><a href="../../MatlabCobraToolbox/computeMetFormulae.html" class="code" title="function [model,metCompute,ele,metEle,rxnBal,S_fill,solInfo,N,LP] = computeMetFormulae(model,metKnown,rxns,metFill,findCM,nameCM,varargin)">computeMetFormulae</a>	Compute the chemical formulas of the unknown metabolites using a set of metabolites with known formulae and a set of reactions.</li><li><a href="../../MatlabCobraToolbox/computeMetMWrange.html" class="code" title="function [metMWrange,metForm,ele,metEle,rxnBal,infeasibility,inconUB,sol,LP] = computeMetMWrange(model,metKnown,metInterest,rxns,percent,varargin)">computeMetMWrange</a>	Compute the minimum and maximum molecular weight (MW) of a metabolie</li><li><a href="../../MatlabCobraToolbox/matlab_example.html" class="code" title="">matlab_example</a>	Example script on applying the method to the E. coli iJO1366 model</li></ul>
 <!-- crossreference -->
+
 
 
 <h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
@@ -58,7 +62,7 @@ This function is called by:
 0012 <span class="keyword">end</span>
 0013 <span class="comment">%combine duplicate elements</span>
 0014 [eleUni,ia,ib] = unique(element);
-0015 <span class="keyword">if</span> numel(eleUni) &lt; numel(element);
+0015 <span class="keyword">if</span> numel(eleUni) &lt; numel(element)
 0016     <span class="keyword">for</span> j = 1:numel(eleUni)
 0017         metEle(:,ia(j)) = sum(metEle(:,ib == j),2);
 0018     <span class="keyword">end</span>
@@ -85,30 +89,31 @@ This function is called by:
 0039         <span class="keyword">else</span>
 0040             metJ = <span class="string">''</span>;
 0041             <span class="keyword">for</span> k = 1:numel(element)
-0042                 <span class="keyword">if</span> metEle(j,k) == 1 &amp;&amp; ~strcmp(element{k},<span class="string">'Charge'</span>)
-0043                     metJ = [metJ element{k}];
-0044                 <span class="keyword">elseif</span> abs(metEle(j,k)) &gt; 10^(-dMax)
-0045                     n = full(metEle(j,k));
-0046                     d = 0;
-0047                     <span class="keyword">while</span> abs(round(n,d) - n) &gt; 1e-10 &amp;&amp; d &lt; dMax
-0048                         d = d + 1;
-0049                     <span class="keyword">end</span>
-0050                     n = round(n,d);
-0051                     str = sprintf([<span class="string">'%.'</span> num2str(dMax) <span class="string">'f'</span>],n);
-0052                     str = regexp(fliplr(str),<span class="string">'0*+(\d*\.\d*\-?)|(.*)'</span>,<span class="string">'tokens'</span>);
-0053                     str = fliplr(str{1}{1});
-0054                     <span class="keyword">if</span> str(end) == <span class="string">'.'</span>
-0055                         str(end) = <span class="string">''</span>; 
-0056                     <span class="keyword">end</span>
-0057                     metJ = [metJ element{k} str];
-0058                     
-0059                 <span class="keyword">end</span>
-0060             <span class="keyword">end</span>
-0061         <span class="keyword">end</span>
-0062         metForm{j} = metJ;
-0063     <span class="keyword">end</span>
-0064 <span class="keyword">end</span>
-0065 <span class="keyword">end</span></pre></div>
-<hr><address>Generated on Mon 05-Jun-2017 00:25:59 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2003</address>
+0042                 <span class="keyword">if</span> abs(metEle(j,k)) &gt; 10^(-dMax)
+0043                     n = full(metEle(j,k));
+0044                     d = 0;
+0045                     <span class="keyword">while</span> abs(round(n,d) - n) &gt; 1e-10 &amp;&amp; d &lt; dMax
+0046                         d = d + 1;
+0047                     <span class="keyword">end</span>
+0048                     n = round(n,d);
+0049                     <span class="keyword">if</span> n == 1 &amp;&amp; ~strcmp(element{k},<span class="string">'Charge'</span>)
+0050                         metJ = strcat(metJ, element{k});
+0051                     <span class="keyword">else</span>
+0052                         str = sprintf([<span class="string">'%.'</span> num2str(dMax) <span class="string">'f'</span>],n);
+0053                         str = regexp(fliplr(str),<span class="string">'0*+(\d*\.\d*\-?)|(.*)'</span>,<span class="string">'tokens'</span>);
+0054                         str = fliplr(str{1}{1});
+0055                         <span class="keyword">if</span> str(end) == <span class="string">'.'</span>
+0056                             str(end) = <span class="string">''</span>;
+0057                         <span class="keyword">end</span>
+0058                         metJ = strcat(metJ, element{k}, str);
+0059                     <span class="keyword">end</span>
+0060                 <span class="keyword">end</span>
+0061             <span class="keyword">end</span>
+0062         <span class="keyword">end</span>
+0063         metForm{j} = metJ;
+0064     <span class="keyword">end</span>
+0065 <span class="keyword">end</span>
+0066 <span class="keyword">end</span></pre></div>
+<hr><address>Generated on Tue 08-Aug-2017 16:33:39 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2005</address>
 </body>
 </html>

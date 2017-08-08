@@ -1,0 +1,13 @@
+/* Created by mdot for Matlab */
+digraph m2html {
+  MW -> checkEleBalance;
+  checkEleBalance -> checkEleBalance;
+  checkSolFeas -> checkSolFeas;
+  compareMetFormulas -> checkEleBalance;
+
+  MW [URL="MW.html"];
+  checkEleBalance [URL="checkEleBalance.html"];
+  checkSolFeas [URL="checkSolFeas.html"];
+  compareMetFormulas [URL="compareMetFormulas.html"];
+  convertMatrixFormulas [URL="convertMatrixFormulas.html"];
+}

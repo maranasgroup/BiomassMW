@@ -1,0 +1,29 @@
+/* Created by mdot for Matlab */
+digraph m2html {
+  MW -> checkEleBalance;
+  checkEleBalance -> checkEleBalance;
+  checkSolFeas -> checkSolFeas;
+  compareMetFormulas -> checkEleBalance;
+  computeMetFormulae -> checkEleBalance;
+  computeMetFormulae -> checkSolFeas;
+  computeMetFormulae -> convertMatrixFormulas;
+  computeMetMWrange -> MW;
+  computeMetMWrange -> checkEleBalance;
+  computeMetMWrange -> checkSolFeas;
+  computeMetMWrange -> convertMatrixFormulas;
+  matlab_example -> MW;
+  matlab_example -> checkEleBalance;
+  matlab_example -> compareMetFormulas;
+  matlab_example -> convertMatrixFormulas;
+  matlab_example -> computeMetFormulae;
+  matlab_example -> computeMetMWrange;
+
+  MW [URL="MatlabCobraToolbox/auxiliary_functions/MW.html"];
+  checkEleBalance [URL="MatlabCobraToolbox/auxiliary_functions/checkEleBalance.html"];
+  checkSolFeas [URL="MatlabCobraToolbox/auxiliary_functions/checkSolFeas.html"];
+  compareMetFormulas [URL="MatlabCobraToolbox/auxiliary_functions/compareMetFormulas.html"];
+  convertMatrixFormulas [URL="MatlabCobraToolbox/auxiliary_functions/convertMatrixFormulas.html"];
+  computeMetFormulae [URL="MatlabCobraToolbox/computeMetFormulae.html"];
+  computeMetMWrange [URL="MatlabCobraToolbox/computeMetMWrange.html"];
+  matlab_example [URL="MatlabCobraToolbox/matlab_example.html"];
+}

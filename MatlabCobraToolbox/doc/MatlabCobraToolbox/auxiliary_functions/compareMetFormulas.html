@@ -1,0 +1,107 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of compareMetFormulas</title>
+  <meta name="keywords" content="compareMetFormulas">
+  <meta name="description" content="Given two cell arrays of the same length of chemical formulas 'form_1' and">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html &copy; 2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../../m2html.css">
+  <script type="text/javascript">
+    if (top.frames.length == 0) { top.location = "../../index.html"; };
+  </script>
+</head>
+<body>
+<a name="_top"></a>
+<!-- ../menu.html MatlabCobraToolbox --><!-- menu.html auxiliary_functions -->
+<h1>compareMetFormulas
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="box"><strong>Given two cell arrays of the same length of chemical formulas 'form_1' and</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="box"><strong>function [yn,element,metEle] = compareMetFormulas(metFormulas_1, metFormulas_2) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="fragment"><pre class="comment"> Given two cell arrays of the same length of chemical formulas 'form_1' and
+ 'form_2', determine if they are the same.
+
+ USAGE:
+    [yn,ele,metEle] = compareMetFormulas(metFormulas_1, metFormulas_2)
+
+ INPUTS:
+    metFormulas_1:   a cell array of chemical formulae 
+    metFormulas_2:   a second cell array of chemical formulae for comparison, same length as metFormulas_1
+ 
+ OUTPUTS:
+    yn:        logical vector, true if equal, false if unequal
+    ele:       cell array of elements in the formulas
+    metEle:    numel(form1) x numel(ele) x 2 matrix of metFormulas_1 and metFormulas_2
+               metEle(i,j,k) is the stoichiometry of element{j} in form_i</pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../../matlabicon.gif)">
+<li><a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>	Check the elemental balance of the reactions in the COBRA mode 'model'.</li></ul>
+This function is called by:
+<ul style="list-style-image:url(../../matlabicon.gif)">
+<li><a href="../../MatlabCobraToolbox/matlab_example.html" class="code" title="">matlab_example</a>	Example script on applying the method to the E. coli iJO1366 model</li></ul>
+<!-- crossreference -->
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../../up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [yn,element,metEle] = compareMetFormulas(metFormulas_1, metFormulas_2)</a>
+0002 <span class="comment">% Given two cell arrays of the same length of chemical formulas 'form_1' and</span>
+0003 <span class="comment">% 'form_2', determine if they are the same.</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% USAGE:</span>
+0006 <span class="comment">%    [yn,ele,metEle] = compareMetFormulas(metFormulas_1, metFormulas_2)</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% INPUTS:</span>
+0009 <span class="comment">%    metFormulas_1:   a cell array of chemical formulae</span>
+0010 <span class="comment">%    metFormulas_2:   a second cell array of chemical formulae for comparison, same length as metFormulas_1</span>
+0011 <span class="comment">%</span>
+0012 <span class="comment">% OUTPUTS:</span>
+0013 <span class="comment">%    yn:        logical vector, true if equal, false if unequal</span>
+0014 <span class="comment">%    ele:       cell array of elements in the formulas</span>
+0015 <span class="comment">%    metEle:    numel(form1) x numel(ele) x 2 matrix of metFormulas_1 and metFormulas_2</span>
+0016 <span class="comment">%               metEle(i,j,k) is the stoichiometry of element{j} in form_i</span>
+0017 
+0018 <span class="keyword">if</span> iscell(metFormulas_1) &amp;&amp; iscell(metFormulas_2) &amp;&amp; numel(metFormulas_1) ~= numel(metFormulas_2)
+0019     error(<span class="string">'The number of chemical formulas in each cell is different!'</span>)
+0020 <span class="keyword">end</span>
+0021 [~,ele1,metEle1] = <a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metFormulas_1);
+0022 [~,ele2,metEle2] = <a href="checkEleBalance.html" class="code" title="function [EleBal, element, metEle] = checkEleBalance(model, element, metEle,selfCall)">checkEleBalance</a>(metFormulas_2);
+0023 <span class="keyword">if</span> iscell(metFormulas_1) &amp;&amp; ischar(metFormulas_2)
+0024     metEle2 = repmat(metEle2,numel(metFormulas_1),1);
+0025 <span class="keyword">elseif</span> ischar(metFormulas_1) &amp;&amp; iscell(metFormulas_2)
+0026     metEle1 = repmat(metEle1,numel(metFormulas_2),1);
+0027 <span class="keyword">end</span>
+0028 nForm = size(metEle1,1);
+0029     
+0030 
+0031 
+0032 element = union(ele1, ele2);
+0033 [~,id] = ismember({<span class="string">'C'</span>;<span class="string">'H'</span>;<span class="string">'N'</span>;<span class="string">'O'</span>;<span class="string">'P'</span>;<span class="string">'S'</span>}, element);
+0034 id2 = setdiff(1:numel(element), id);
+0035 element = element([id(id~=0); id2(:)]);
+0036 id = strcmp(element,<span class="string">'Charge'</span>);
+0037 <span class="keyword">if</span> any(id)
+0038     element = [element(~id); element(id)];
+0039 <span class="keyword">end</span>
+0040 
+0041 metEle = zeros(nForm,numel(element), 2);
+0042 [~,idEl1] = ismember(ele1,element);
+0043 [~,idEl2] = ismember(ele2,element);
+0044 metEle(:,idEl1,1) = metEle1;
+0045 metEle(:,idEl2,2) = metEle2;
+0046 
+0047 yn = all(abs(metEle(:,:,1) - metEle(:,:,2)) &lt; 1e-6, 2);</pre></div>
+<hr><address>Generated on Tue 08-Aug-2017 16:33:39 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" target="_parent">m2html</a></strong> &copy; 2005</address>
+</body>
+</html>
